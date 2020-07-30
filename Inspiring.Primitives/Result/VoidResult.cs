@@ -8,6 +8,9 @@ namespace Inspiring {
     public class VoidResult : Result, IResult<VoidResult> {
         internal VoidResult(ImmutableList<IResultItem>? items = null) : base(false, items) { }
 
+        public new VoidResult Add(IResultItem item)
+            => (VoidResult)base.Add(item);
+
         public new VoidResult WithoutItems()
             => new VoidResult();
 
@@ -29,12 +32,12 @@ namespace Inspiring {
             => new VoidResult(items);
 
         protected override Result InvokeWithoutItems()
-            => Result.Empty;
-
-        VoidResult IResult<VoidResult>.Add(IResultItem item)
-            => this + item;
+            => Empty;
 
         public static VoidResult operator +(VoidResult result, IResultItem item)
-            => (VoidResult)(result ?? throw new ArgumentNullException(nameof(result))).Add(item);
+            => result.MustNotBeNull(nameof(result)).Add(item);
+
+        public static VoidResult operator +(VoidResult first, VoidResult second)
+            => (VoidResult)Merge(first, second);
     }
 }

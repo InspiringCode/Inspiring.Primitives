@@ -1,9 +1,11 @@
-﻿using Inspiring.Core;
+﻿#pragma warning disable CS0660 // Type defines operator == or operator != but does not override Object.Equals(object o)
+#pragma warning disable CS0661 // Type defines operator == or operator != but does not override Object.GetHashCode()
+
+using Inspiring.Core;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 
 namespace Inspiring {
     public abstract class Result : IResult<Result> {
@@ -27,6 +29,9 @@ namespace Inspiring {
         public Result<T> SetTo<T>(T value)
             => new Result<T>(value, _items);
 
+        public Result Add(IResultItem item)
+            => CreateCopy(_items.Add(item.MustNotBeNull(nameof(item))));
+
         public IEnumerable<TItem> Get<TItem>() where TItem : IResultItem
             => _items.OfType<TItem>();
 
@@ -40,9 +45,6 @@ namespace Inspiring {
             _ => $"{_items.Last()} (and {_items.Count - 1} more items)"
         };
 
-        Result IResult<Result>.Add(IResultItem item)
-            => this + item;
-
         protected bool ItemsEqualToItemsOf(Result other)
             => _items.SequenceEqual(other._items);
 
@@ -52,9 +54,6 @@ namespace Inspiring {
                 code.Add(item);
             return code;
         }
-
-        protected Result Add(IResultItem item)
-            => CreateCopy(_items.Add(item ?? throw new ArgumentNullException(nameof(item))));
 
         protected abstract Result CreateCopy(ImmutableList<IResultItem> items);
 
@@ -67,10 +66,25 @@ namespace Inspiring {
         public static Result operator +(Result result, IResultItem item)
             => result.Add(item);
 
+        public static Result operator +(Result first, Result second)
+            => Merge(first, second);
+
         public static bool operator ==(Result x, object y)
             => Equals(x, y);
 
         public static bool operator !=(Result x, object y)
             => !Equals(x, y);
+
+        protected static Result Merge(Result first, Result second) {
+            first.MustNotBeNull(nameof(first));
+            second.MustNotBeNull(nameof(second));
+
+            bool preferFirstAsTemplate =
+                second is VoidResult ||
+                (!second.HasValue && first.HasValue);
+
+            Result template = preferFirstAsTemplate ? first : second;
+            return template.CreateCopy(first._items.AddRange(second._items));
+        }
     }
 }

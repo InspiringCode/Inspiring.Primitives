@@ -1,7 +1,10 @@
 ﻿using FluentAssertions.Execution;
 using FluentAssertions.Primitives;
 using Inspiring;
+using Inspiring.Core;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace FluentAssertions {
@@ -48,11 +51,22 @@ namespace FluentAssertions {
             Subject = instance;
         }
 
-        public AndConstraint<ResultAssertions<T>> HaveItem(IResultItem item) {
+        public AndConstraint<ResultAssertions<T>> HaveItem(IResultItem expected) {
             Execute.Assertion
-                .ForCondition(Subject.Get<IResultItem>().Contains(item))
-                .FailWith("Expected result to contain the result item {0}", item);
+                .ForCondition(Subject.Get<IResultItem>().Contains(expected))
+                .FailWith("Expected result to contain the result item {0}", expected);
 
+            return new AndConstraint<ResultAssertions<T>>(this);
+        }
+
+        public AndConstraint<ResultAssertions<T>> HaveItemsInOrder(params IResultItem[] expected)
+            => HaveItemsInOrder(expected, "");
+
+        public AndConstraint<ResultAssertions<T>> HaveItemsInOrder(IEnumerable<IResultItem> expected, string because = "", params object[] becauseArgs) {
+            using (new AssertionScope("result items")) {
+
+                Subject.Get<IResultItem>().Should().ContainInOrder(expected, because, becauseArgs);
+            }
             return new AndConstraint<ResultAssertions<T>>(this);
         }
 

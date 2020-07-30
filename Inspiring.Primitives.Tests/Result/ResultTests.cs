@@ -20,9 +20,6 @@ namespace Inspiring {
 
             WHEN["assigning a VoidResult to a Result<T>"] |= () => t = Result.Empty + AnItem;
             THEN["it is implicitly casted and keeps its items"] |= () => t.Should().HaveItem(AnItem);
-
-            WHEN["assigning a Result<T> to a VoidResult"] |= () => v = Result.From("test") + AnItem;
-            THEN["it is implicitly casted and keeps its items"] |= () => v.Should().HaveItem(AnItem);
         }
 
         [Scenario]
@@ -117,7 +114,7 @@ namespace Inspiring {
             WHEN["printing a result with a value but without items"] |= () => r = Result.From("VALUE");
             THEN["it prints only the value"] |= () => r.ToString().Should().Be("[VALUE]");
 
-            WHEN["printing a result with value and item"] |= () => r = Result.From(5) 
+            WHEN["printing a result with value and item"] |= () => r = Result.From(5)
                 + new TestItem { IsError = true, Message = "Error" };
             THEN["it prints the value and the item"] |= () => r.ToString().Should().Be("[5] Error");
 
@@ -125,6 +122,51 @@ namespace Inspiring {
                 + new TestItem { IsError = true, Message = "Error" }
                 + new TestItem { IsError = false, Message = "Info" };
             THEN["it prints only the last message"] |= () => r.ToString().Should().Be("Info (and 1 more items)");
+        }
+
+        [Scenario(DisplayName = "Merge")]
+        internal void Merge(Result r, Result<int> t, TestItem i1, TestItem i2) {
+            GIVEN["two test items"] |= () => (i1, i2) = (new TestItem(), new TestItem());
+
+            WHEN["the first result has a value and the second is a VoidResult"] |= () => {
+                Result<int> r1 = Result.From(5) + i1;
+                VoidResult r2 = Result.Empty + i2;
+                t = r1 + r2;
+            };
+            THEN["the result contains the value of the first"] |= () => t.Should().HaveValue(5);
+            AND["it has the items of both"] |= () => t.Should().HaveItemsInOrder(i1, i2);
+
+            WHEN["the first result is a VoidResult and the second has a value"] |= () => {
+                VoidResult r1 = Result.Empty + i1;
+                Result<int> r2 = Result.From(5) + i2;
+                t = r1 + r2;
+            };
+            THEN["the result contains the value of the first"] |= () => t.Should().HaveValue(5);
+            AND["it has the items of both"] |= () => t.Should().HaveItemsInOrder(i1, i2);
+
+            WHEN["both results have a value"] |= () => {
+                Result<int> r1 = Result.From(5) + i1;
+                Result<int> r2 = Result.From(7) + i2;
+                t = r1 + r2;
+            };
+            THEN["the result contains the value of the second"] |= () => t.Should().HaveValue(7);
+            AND["it has the items of both"] |= () => t.Should().HaveItemsInOrder(i1, i2);
+
+            WHEN["both results are VoidResult"] |= () => {
+                Result r1 = Result.Empty + i1;
+                VoidResult r2 = Result.Empty + i2;
+                r = r1 + r2;
+            };
+            THEN["the result is a VoidResult"] |= () => r.Should().BeOfType<VoidResult>();
+            AND["it has the items of both"] |= () => r.Should().HaveItemsInOrder(i1, i2);
+
+            WHEN["both results have no value"] |= () => {
+                Result<DateTime> r1 = Result.Empty + i1;
+                Result<string> r2 = Result.Empty + i2;
+                r = r1 + r2;
+            };
+            THEN["the result is a VoidResult"] |= () => r.Should().BeOfType<Result<string>>();
+            AND["it has the items of both"] |= () => r.Should().HaveItemsInOrder(i1, i2);
         }
 
 

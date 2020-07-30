@@ -3,11 +3,19 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Inspiring.Core {
-    public interface IResult<T> where T : IResult<T> {
+    public interface IResult<TResultType> where TResultType : IResult<TResultType> {
         bool HasValue { get; }
 
-        T Add(IResultItem item);
+        Result<T> SetTo<T>(T value);
 
-        T WithoutItems();
+        Result<T> To<T>();
+
+        VoidResult ToVoid();
+
+        TResultType Add(IResultItem item);
+
+        IEnumerable<TItem> Get<TItem>() where TItem : IResultItem;
+
+        TResultType WithoutItems();
     }
 }

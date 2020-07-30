@@ -28,6 +28,9 @@ namespace Inspiring {
         private Result(bool hasValue = false, T value = default, ImmutableList<IResultItem>? items = null)
             : base(hasValue, items) => _value = value;
 
+        public new Result<T> Add(IResultItem item)
+            => (Result<T>)base.Add(item);
+
         public new Result<T> WithoutItems()
             => new Result<T>(HasValue, _value);
 
@@ -75,9 +78,6 @@ namespace Inspiring {
             return s.ToString();
         }
 
-        Result<T> IResult<Result<T>>.Add(IResultItem item)
-            => this + item;
-
         protected override Result CreateCopy(ImmutableList<IResultItem> items)
             => new Result<T>(HasValue, _value, items);
 
@@ -92,13 +92,19 @@ namespace Inspiring {
             => new Result<T>(true, value);
 
         public static implicit operator Result<T>(VoidResult result)
-            => (result ?? throw new ArgumentNullException(nameof(result))).To<T>();
-
-        public static implicit operator VoidResult(Result<T> result)
-            => result.ToVoid();
+            => result.MustNotBeNull(nameof(result)).To<T>();
 
         public static Result<T> operator +(Result<T> result, IResultItem item)
-            => (Result<T>)(result ?? throw new ArgumentNullException(nameof(result))).Add(item);
+            => result.MustNotBeNull(nameof(result)).Add(item);
+
+        public static Result<T> operator +(Result<T> first, VoidResult second)
+            => (Result<T>)Merge(first, second);
+
+        public static Result<T> operator +(VoidResult first, Result<T> second)
+            => (Result<T>)Merge(first, second);
+
+        public static Result<T> operator +(Result<T> first, Result<T> second)
+            => (Result<T>)Merge(first, second);
 
         public static bool operator ==(Result<T> x, T y)
             => Equals(x, y);
