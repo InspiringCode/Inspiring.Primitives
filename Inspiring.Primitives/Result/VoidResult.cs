@@ -20,6 +20,11 @@ namespace Inspiring {
             return code.ToHashCode();
         }
 
+        public override string ToString() {
+            string items = base.ToString();
+            return items != "" ? items : "<void>";
+        }
+
         protected override Result CreateCopy(ImmutableList<IResultItem> items)
             => new VoidResult(items);
 

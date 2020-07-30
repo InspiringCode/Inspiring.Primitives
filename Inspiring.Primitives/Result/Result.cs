@@ -33,6 +33,13 @@ namespace Inspiring {
         public Result WithoutItems()
             => InvokeWithoutItems();
 
+        public override string ToString() => _items.Count switch
+        {
+            0 => "",
+            1 => $"{_items.First()}",
+            _ => $"{_items.Last()} (and {_items.Count - 1} more items)"
+        };
+
         Result IResult<Result>.Add(IResultItem item)
             => this + item;
 

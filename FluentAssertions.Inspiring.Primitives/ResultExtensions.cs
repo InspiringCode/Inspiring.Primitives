@@ -17,11 +17,17 @@ namespace FluentAssertions {
             return new AndWhichConstraint<ResultAssertions<Result<T>>, T>(ass, ass.Subject.Value);
         }
 
-        public static AndWhichConstraint<ResultAssertions<Result<T>>, T> HaveValue<T>(this ResultAssertions<Result<T>> ass, T expected) {
+        public static AndWhichConstraint<ResultAssertions<Result<T>>, T> HaveValue<T>(
+            this ResultAssertions<Result<T>> ass, T expected,
+            string because = "", params object[] becauseArgs
+        ) {
             ass.Subject
-                .Should().HaveValue()
-                .Which
-                .Should().Be(expected);
+                .Should().HaveValue();
+
+            Execute.Assertion
+                .BecauseOf(because, becauseArgs)
+                .ForCondition(ass.Subject == expected)
+                .FailWith("Expected result to have value {0}{reason}, but found {1}.", expected, ass.Subject);
 
             return new AndWhichConstraint<ResultAssertions<Result<T>>, T>(ass, ass.Subject.Value);
         }

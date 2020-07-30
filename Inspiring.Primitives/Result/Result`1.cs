@@ -20,7 +20,7 @@ namespace Inspiring {
         }
 
         internal Result(ImmutableList<IResultItem> items)
-            : this(false, default, items) { }
+            : this(false, default!, items) { }
 
         internal Result(T value, ImmutableList<IResultItem> items)
             : this(true, value, items) { }
@@ -52,6 +52,27 @@ namespace Inspiring {
             code.Add(HasValue);
             code.Add(_value);
             return code.ToHashCode();
+        }
+
+        public override string ToString() {
+            StringBuilder s = new StringBuilder();
+
+            if (HasValue) {
+                if (ReferenceEquals(_value, null)) {
+                    s.Append("[<null>]");
+                } else {
+                    s.Append('[');
+                    s.Append(_value);
+                    s.Append(']');
+                }
+            }
+
+            string items = base.ToString();
+            if (items != "" && s.Length > 0)
+                s.Append(' ');
+            s.Append(items);
+
+            return s.ToString();
         }
 
         Result<T> IResult<Result<T>>.Add(IResultItem item)

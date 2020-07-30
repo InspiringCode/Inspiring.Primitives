@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using System;
 using System.Security.Cryptography;
 using Xbehave;
@@ -108,6 +109,25 @@ namespace Inspiring {
             AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
         }
 
+        [Scenario(DisplayName = "ToString")]
+        internal void ToStringFormatting(Result r) {
+            WHEN["printing a VoidResult without items"] |= () => r = Result.Empty;
+            THEN["it prints: <void>"] |= () => r.ToString().Should().Be("<void>");
+
+            WHEN["printing a result with a value but without items"] |= () => r = Result.From("VALUE");
+            THEN["it prints only the value"] |= () => r.ToString().Should().Be("[VALUE]");
+
+            WHEN["printing a result with value and item"] |= () => r = Result.From(5) 
+                + new TestItem { IsError = true, Message = "Error" };
+            THEN["it prints the value and the item"] |= () => r.ToString().Should().Be("[5] Error");
+
+            WHEN["printing an empty Result<T> with items"] |= () => r = Result.Of<string>()
+                + new TestItem { IsError = true, Message = "Error" }
+                + new TestItem { IsError = false, Message = "Info" };
+            THEN["it prints only the last message"] |= () => r.ToString().Should().Be("Info (and 1 more items)");
+        }
+
+
         [Scenario(DisplayName = "Equality")]
         internal void Equality(Result r1, Result r2) {
             WHEN["comparing a Result<T> with a value to the same value of T"] |= () => r1 = Result.From(5);
@@ -185,7 +205,6 @@ namespace Inspiring {
                 Equals(r1 + AnItem, r2).Should().BeFalse("items don't match");
                 Equals(r2 + AnItem, r1).Should().BeFalse("items don't match");
                 HashcodeEquals(r1 + AnItem, r2).Should().BeFalse("items don't match");
-
             }
 
             void assertInequality(bool allowHashCodesToBeEqual = false) {
@@ -201,8 +220,12 @@ namespace Inspiring {
                 => r1.Equals(r2);
         }
 
-        internal class TestItem : IResultItem {
+        internal class TestItem : IResultItem, IResultItemInfo {
+            public string Message { get; set; }
 
+            public bool IsError { get; set; }
+
+            public override string ToString() => Message;
         }
     }
 }
