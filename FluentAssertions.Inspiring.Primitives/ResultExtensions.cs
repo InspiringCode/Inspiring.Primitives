@@ -50,6 +50,14 @@ namespace FluentAssertions {
             return new AndConstraint<ResultAssertions<T>>(this);
         }
 
+        public AndConstraint<ResultAssertions<T>> NotHaveItems() {
+            Execute.Assertion
+                .ForCondition(!Subject.Get<IResultItem>().Any())
+                .FailWith("Expected result to not contain any result items, but result contains: {0}.", Subject.Get<IResultItem>());
+
+            return new AndConstraint<ResultAssertions<T>>(this);
+        }
+
         //public AndConstraint<ResultAssertions<T>> BeSuccessful() {
         //    Execute.Assertion
         //        .ForCondition(!Subject.HasErrors)

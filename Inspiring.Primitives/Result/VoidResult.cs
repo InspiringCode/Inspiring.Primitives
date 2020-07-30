@@ -6,12 +6,25 @@ using System.Text;
 
 namespace Inspiring {
     public class VoidResult : Result, IResult<VoidResult> {
-        internal VoidResult(ImmutableList<IResultItem> items = null) : base(false, items) { }
+        internal VoidResult(ImmutableList<IResultItem>? items = null) : base(false, items) { }
 
-        public Result<T> To<T>() => new Result<T>(_items);
+        public new VoidResult WithoutItems()
+            => new VoidResult();
+
+        public override bool Equals(object obj)
+            => obj is VoidResult r && ItemsEqualToItemsOf(r);
+
+        public override int GetHashCode() {
+            HashCode code = GetHashcodeOfItems();
+            code.Add(typeof(VoidResult));
+            return code.ToHashCode();
+        }
 
         protected override Result CreateCopy(ImmutableList<IResultItem> items)
             => new VoidResult(items);
+
+        protected override Result InvokeWithoutItems()
+            => Result.Empty;
 
         VoidResult IResult<VoidResult>.Add(IResultItem item)
             => this + item;

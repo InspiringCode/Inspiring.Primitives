@@ -7,5 +7,7 @@ namespace Inspiring.Core {
         bool HasValue { get; }
 
         T Add(IResultItem item);
+
+        T WithoutItems();
     }
 }

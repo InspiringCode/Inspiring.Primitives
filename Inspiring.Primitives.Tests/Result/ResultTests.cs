@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using System;
+using System.Security.Cryptography;
 using Xbehave;
 
 namespace Inspiring {
@@ -76,6 +77,17 @@ namespace Inspiring {
                 t.HasValue.Should().BeTrue();
                 t.Value.Should().Be(5);
             };
+
+            WHEN["clearing items on a VoidResult"] |= () => {
+                r = Result.Empty + AnItem;
+                r = r.WithoutItems();
+            };
+            THEN["the result has no items"] |= () => r.Should().NotHaveItems();
+            WHEN["clearing items on a Result<T>"] |= () => {
+                r = Result.From(5) + AnItem;
+                r = r.WithoutItems();
+            };
+            THEN["the result has no items"] |= () => r.Should().NotHaveItems();
         }
 
         [Scenario]
@@ -94,6 +106,99 @@ namespace Inspiring {
             };
             THEN["the result has the value"] |= () => actual.Should().HaveValue("test");
             AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
+        }
+
+        [Scenario(DisplayName = "Equality")]
+        internal void Equality(Result r1, Result r2) {
+            WHEN["comparing a Result<T> with a value to the same value of T"] |= () => r1 = Result.From(5);
+            THEN["it is equal"] |= () => r1.Equals(5).Should().BeTrue();
+
+            WHEN["comparing a Result<T> with a value to a different value of T"] |= () => r1 = Result.From(5);
+            THEN["it is not equal"] |= () => r1.Equals(6).Should().BeFalse();
+
+            WHEN["comparing a Result<T> without a value a value of T"] |= () => r1 = Result.Of<int>();
+            THEN["it is not equal"] |= () => r1.Equals(5).Should().BeFalse();
+
+            WHEN["comparing a Result<reference type> without a value to null"] |= () => r1 = Result.Of<string>();
+            THEN["it is not equal"] |= () => r1.Equals(null).Should().BeFalse();
+
+            WHEN["comparing a Result<reference type> with a null value to null"] |= () => r1 = Result.From<string>(null);
+            THEN["it is equal"] |= () => r1.Equals(null).Should().BeTrue();
+
+            WHEN["comparing a VoidResult to null"] |= () => r1 = Result.Empty;
+            THEN["it is not equal"] |= () => r1.Equals(null).Should().BeFalse();
+
+            WHEN["comparing a VoidResult to a Result<int>"] |= () => (r1, r2) = (Result.Empty, Result.From(5));
+            THEN["they are never equal"] |= () => assertInequality();
+
+            WHEN["comparing a VoidResult to another VoidResult"] |= () => (r1, r2) = (Result.Empty, newVoidInstance());
+            THEN["they are equal only if they have the same items"] |= () => assertEquality();
+
+            WHEN["comparing two Result<T> without a value"] |= () => (r1, r2) = (newEmpty<int>(), newEmpty<int>());
+            THEN["they are equal only if they have the same items"] |= () => assertEquality();
+
+            WHEN["comparing a Result<T> to an Result<U> with values that are equal"] |= ()
+                => (r1, r2) = (Result.From<string>("test"), Result.From<object>("test"));
+            THEN["they are equal only if they have the same items"] |= () => assertEquality();
+
+            WHEN["comparing two Result<T> with different values"] |= () => (r1, r2) = (Result.From(5), Result.From(6));
+            THEN["they are never equal"] |= () => assertInequality();
+
+            WHEN["comparing a Result<T> to an Result<U> without values"] |= () => (r1, r2) = (Result.Of<int>(), Result.Of<long>());
+            THEN["they are never equal"] |= () => assertInequality(allowHashCodesToBeEqual: true);
+
+            WHEN["comparing two Result<T> with null values"] |= () => (r1, r2) = (Result.From<string>(null), Result.From<IDisposable>(null));
+            THEN["they are equal"] |= () => assertEquality();
+
+            Result<string> s = default;
+            WHEN["comparing two results with == and !="] |= () => (s, r2) = ("test", Result.From<object>("test"));
+            THEN["the operators behave the same way as Equals"] |= () => {
+                (s == r2).Should().BeTrue();
+                (s != r2).Should().BeFalse();
+                (s == "test").Should().BeTrue();
+                (s != "t").Should().BeTrue();
+                (s == 5).Should().BeFalse();
+
+                (r2 == "test").Should().BeTrue();
+                (r2 != "t").Should().BeTrue();
+            };
+
+            Result newVoidInstance() {
+                Result r = Result.Empty + AnItem;
+                return r.WithoutItems();
+            }
+
+            Result newEmpty<T>() {
+                Result r = Result.Of<T>() + AnItem;
+                return r.WithoutItems();
+            }
+
+            void assertEquality() {
+                Equals(r1, r2).Should().BeTrue();
+                Equals(r2, r1).Should().BeTrue();
+                HashcodeEquals(r1, r2).Should().BeTrue();
+
+                Equals(r1 + AnItem, r2 + AnItem).Should().BeTrue();
+                Equals(r2 + AnItem, r1 + AnItem).Should().BeTrue();
+                HashcodeEquals(r1 + AnItem, r2 + AnItem).Should().BeTrue();
+
+                Equals(r1 + AnItem, r2).Should().BeFalse("items don't match");
+                Equals(r2 + AnItem, r1).Should().BeFalse("items don't match");
+                HashcodeEquals(r1 + AnItem, r2).Should().BeFalse("items don't match");
+
+            }
+
+            void assertInequality(bool allowHashCodesToBeEqual = false) {
+                Equals(r1, r2).Should().BeFalse();
+                if (!allowHashCodesToBeEqual)
+                    HashcodeEquals(r1, r2).Should().BeFalse();
+            }
+
+            bool HashcodeEquals(Result r1, Result r2)
+                => r1.GetHashCode() == r2.GetHashCode();
+
+            bool Equals(Result r1, Result r2)
+                => r1.Equals(r2);
         }
 
         internal class TestItem : IResultItem {

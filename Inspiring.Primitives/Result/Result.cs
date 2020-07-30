@@ -13,7 +13,7 @@ namespace Inspiring {
 
         public bool HasValue { get; }
 
-        protected Result(bool hasValue, ImmutableList<IResultItem> items = null) {
+        protected Result(bool hasValue, ImmutableList<IResultItem>? items = null) {
             _items = items ?? ImmutableList.Create<IResultItem>();
             HasValue = hasValue;
         }
@@ -30,13 +30,28 @@ namespace Inspiring {
         public IEnumerable<TItem> Get<TItem>() where TItem : IResultItem
             => _items.OfType<TItem>();
 
+        public Result WithoutItems()
+            => InvokeWithoutItems();
+
         Result IResult<Result>.Add(IResultItem item)
             => this + item;
+
+        protected bool ItemsEqualToItemsOf(Result other)
+            => _items.SequenceEqual(other._items);
+
+        protected HashCode GetHashcodeOfItems() {
+            HashCode code = new HashCode();
+            foreach (IResultItem item in _items)
+                code.Add(item);
+            return code;
+        }
 
         protected Result Add(IResultItem item)
             => CreateCopy(_items.Add(item ?? throw new ArgumentNullException(nameof(item))));
 
         protected abstract Result CreateCopy(ImmutableList<IResultItem> items);
+
+        protected abstract Result InvokeWithoutItems();
 
         public static Result<T> Of<T>() => Result<T>.Empty;
 
@@ -44,5 +59,11 @@ namespace Inspiring {
 
         public static Result operator +(Result result, IResultItem item)
             => result.Add(item);
+
+        public static bool operator ==(Result x, object y)
+            => Equals(x, y);
+
+        public static bool operator !=(Result x, object y)
+            => !Equals(x, y);
     }
 }
