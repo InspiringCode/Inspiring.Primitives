@@ -34,6 +34,15 @@ namespace Inspiring {
         public new Result<T> WithoutItems()
             => new Result<T>(HasValue, _value);
 
+        public Result<U> Transform<U>(Func<T, Result<U>> transformation) {
+            return HasValue ?
+                ToVoid() + transformation(Value) :
+                To<U>();
+        }
+
+        public Result<U> Transform<U>(Func<T, U> transformation)
+            => Transform(value => From(transformation(value)));
+
         public override bool Equals(object obj) {
             if (obj is Result r) {
                 bool valueEquals =

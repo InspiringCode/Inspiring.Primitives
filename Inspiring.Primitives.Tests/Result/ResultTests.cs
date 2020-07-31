@@ -13,6 +13,34 @@ namespace Inspiring {
             GIVEN["an item"] |= () => AnItem = new TestItem();
         }
 
+        [Scenario(DisplayName = "Transformation")]
+        internal void Transformation(Result<string> s, TestItem item1, TestItem item2) {
+            GIVEN["a few items"] |= () => (item1, item2) = (new TestItem(), new TestItem());
+            WHEN["the result does not have a value"] |= () => {
+                Result<int> i = Result.Empty + item1;
+                s = i.Transform(val => val.ToString());
+            };
+            THEN["the transformation is not executed"] |= () => s.Should()
+                .NotHaveAValue().And
+                .HaveItemsInOrder(item1);
+
+            WHEN["the result has a value"] |= () => {
+                Result<int> i = Result.From(27) + item1;
+                s = i.Transform(val => val.ToString());
+            };
+            THEN["the transformation is executed"] |= () => s.Should()
+                .HaveValue("27").And
+                .HaveItemsInOrder(item1);
+
+            WHEN["the result has a value and the transformation returns a result"] |= () => {
+                Result<int> i = Result.From(27) + item1;
+                s = i.Transform(val => Result.From(val.ToString()) + item2);
+            };
+            THEN["the result of the transformation is merged with the original result"] |= () => s.Should()
+                .HaveValue("27").And
+                .HaveItemsInOrder(item1, item2);
+        }
+
         [Scenario]
         internal void CastOperations(Result r, Result<int> t, VoidResult v) {
             WHEN["assigning a value to a Result<T>"] |= () => t = 1;
@@ -28,7 +56,7 @@ namespace Inspiring {
                 s = Result.From("test") + AnItem;
                 i = s.To<int>();
             };
-            THEN["it has no value"] |= () => i.Should().NotHaveValue();
+            THEN["it has no value"] |= () => i.Should().NotHaveAValue();
             THEN["it contains all original items"] |= () => i.Should().HaveItem(AnItem);
         }
 

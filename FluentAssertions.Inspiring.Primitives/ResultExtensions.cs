@@ -34,7 +34,7 @@ namespace FluentAssertions {
 
             return new AndWhichConstraint<ResultAssertions<Result<T>>, T>(ass, ass.Subject.Value);
         }
-        public static AndConstraint<ResultAssertions<Result<T>>> NotHaveValue<T>(this ResultAssertions<Result<T>> ass) {
+        public static AndConstraint<ResultAssertions<Result<T>>> NotHaveAValue<T>(this ResultAssertions<Result<T>> ass) {
             Execute.Assertion
                 .ForCondition(!ass.Subject.HasValue)
                 .FailWith("Expected result to not have any value.");
