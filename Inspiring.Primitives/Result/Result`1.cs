@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Text;
 
 namespace Inspiring {
@@ -42,6 +43,13 @@ namespace Inspiring {
 
         public Result<U> Transform<U>(Func<T, U> transformation)
             => Transform(value => From(transformation(value)));
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public Result<R> SelectMany<U, R>(Func<T, Result<U>> transformation, Func<T, U, R> resultSelector) {
+            return HasValue ?
+                Transform(transformation).Transform(transformedValue => resultSelector(Value, transformedValue)) :
+                To<R>();
+        }
 
         public override bool Equals(object obj) {
             if (obj is Result r) {

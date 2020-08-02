@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using System;
 using System.Security.Cryptography;
+using System.Text;
 using Xbehave;
 
 namespace Inspiring {
@@ -39,6 +40,43 @@ namespace Inspiring {
             THEN["the result of the transformation is merged with the original result"] |= () => s.Should()
                 .HaveValue("27").And
                 .HaveItemsInOrder(item1, item2);
+        }
+
+        [Scenario(DisplayName = "LINQ syntax")]
+        internal void LinqSyntax(Result<string> s, TestItem item1, TestItem item2, TestItem item3) {
+            GIVEN["a few items"] |= () => (item1, item2, item3) = (new TestItem(), new TestItem(), new TestItem());
+
+            WHEN["all transformation return a value"] |= () => s =
+                from v1 in Result.From('A') + item1
+                from v2 in method1(v1)
+                from v3 in method2(v2)
+                from v4 in method3(v3)
+                select $"{v1} {v2} {v3} {v4}";
+
+            THEN["the transformed value is returned"] |= () => s.Should().HaveValue("A 65 65 [65]");
+            AND["contain all combined results"] |= () => s.Should().HaveItemsInOrder(item1, item2, item3);
+
+            WHEN["one transformation does not return a value"] |= () => s =
+                from v1 in Result.From('A') + item1
+                from v2 in method1(v1, returnAValue: false)
+                from v3 in method2(v2)
+                from v4 in method3(v3)
+                select $"{v1} {v2} {v3} {v4}";
+
+            THEN["the result has no value"] |= () => s.Should().NotHaveAValue();
+            AND["contains all combined results"] |= () => s.Should().HaveItemsInOrder(item1, item2);
+
+            Result<int> method1(char c, bool returnAValue = true)
+                => returnAValue ?
+                    Result.From((int)c) + item2 :
+                    Result.Of<int>() + item2;
+
+            Result<string> method2(int i)
+                => Result.From(i.ToString()) + item3;
+
+
+            Result<string> method3(string s)
+                => '[' + s + ']';
         }
 
         [Scenario]
