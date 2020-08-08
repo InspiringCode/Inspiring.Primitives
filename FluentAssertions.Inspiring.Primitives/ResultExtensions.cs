@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace FluentAssertions {
     public static class ResultExtensions {
-        public static ResultAssertions<T> Should<T>(this T result) where T : Result
+        public static ResultAssertions<T> Should<T>(this T result) where T : IResult
             => new ResultAssertions<T>(result);
 
         public static AndWhichConstraint<ResultAssertions<Result<T>>, T> HaveValue<T>(this ResultAssertions<Result<T>> ass) {
@@ -44,7 +44,7 @@ namespace FluentAssertions {
     }
 
     public class ResultAssertions<T> : ReferenceTypeAssertions<T, ResultAssertions<T>>
-        where T : Result {
+        where T : IResult {
         protected override string Identifier => "result";
 
         public ResultAssertions(T instance) {

@@ -4,12 +4,20 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace Inspiring {
-    public class Result<T> : Result, IResult<Result<T>> {
-        internal static readonly new Result<T> Empty = new Result<T>();
+    public readonly struct Result<T> : IResult, IResultType<Result<T>>, IEquatable<Result<T>> {
+        private readonly ImmutableList<IResultItem>? _items;
         private readonly T _value;
+        private readonly bool _hasValue;
+
+        public bool HasValue => _hasValue;
+
+        private ImmutableList<IResultItem> Items
+            => _items ?? ImmutableList.Create<IResultItem>();
 
         public T Value {
             get {
@@ -20,44 +28,68 @@ namespace Inspiring {
             }
         }
 
-        internal Result(ImmutableList<IResultItem> items)
+        internal Result(ImmutableList<IResultItem>? items)
             : this(false, default!, items) { }
+            
 
-        internal Result(T value, ImmutableList<IResultItem> items)
+        internal Result(T value, ImmutableList<IResultItem>? items)
             : this(true, value, items) { }
 
-        private Result(bool hasValue = false, T value = default, ImmutableList<IResultItem>? items = null)
-            : base(hasValue, items) => _value = value;
+        private Result(bool hasValue = false, T value = default!, ImmutableList<IResultItem>? items = null) {
+            _items = items;
+            _value = value!;
+            _hasValue = hasValue;
+        }
 
-        public new Result<T> Add(IResultItem item)
-            => (Result<T>)base.Add(item);
+        public Result<T> Add(IResultItem item)
+            => new Result<T>(_hasValue, _value, Items.Add(item));
 
-        public new Result<T> WithoutItems()
-            => new Result<T>(HasValue, _value);
+        public Result<T> WithoutItems()
+            => new Result<T>(_hasValue, _value, null);
+        
+        public IEnumerable<TItem> Get<TItem>() where TItem : IResultItem
+            => Items.OfType<TItem>();
+
+        public VoidResult ToVoid()
+            => new VoidResult(_items);
+
+        public Result<U> To<U>()
+            => new Result<U>(_items);
+
+        public Result<U> SetTo<U>(U value)
+            => new Result<U>(value, _items);
 
         public Result<U> Transform<U>(Func<T, Result<U>> transformation) {
             return HasValue ?
                 ToVoid() + transformation(Value) :
                 To<U>();
         }
-
         public Result<U> Transform<U>(Func<T, U> transformation)
-            => Transform(value => From(transformation(value)));
+            => Transform(value => Result.From(transformation(value)));
 
         [EditorBrowsable(EditorBrowsableState.Never)]
         public Result<R> SelectMany<U, R>(Func<T, Result<U>> transformation, Func<T, U, R> resultSelector) {
-            return HasValue ?
-                Transform(transformation).Transform(transformedValue => resultSelector(Value, transformedValue)) :
-                To<R>();
+            if (!HasValue)
+                return To<R>();
+
+            Result<U> transformed = Transform(transformation);
+            return transformed.HasValue ?
+                transformed.SetTo(resultSelector(Value, transformed.Value)) :
+                transformed.To<R>();
         }
 
+        public bool Equals(Result<T> other) =>
+            _hasValue == other._hasValue &&
+            Equals(_value, other._value) &&
+            Items.SequenceEqual(other.Items);
+
         public override bool Equals(object obj) {
-            if (obj is Result r) {
+            if (obj is IResult r) {
                 bool valueEquals =
                     HasValue && r.HasValue && r.Equals(_value) ||
                     !HasValue && !r.HasValue && Equals(GetType(), r.GetType());
 
-                return valueEquals && ItemsEqualToItemsOf(r);
+                return valueEquals && Items.SequenceEqual(r.Get<IResultItem>());
             }
 
             if (HasValue)
@@ -67,7 +99,7 @@ namespace Inspiring {
         }
 
         public override int GetHashCode() {
-            HashCode code = GetHashcodeOfItems();
+            HashCode code = Utils.GetHashcodeOfItems(_items);
             code.Add(typeof(Result<>));
             code.Add(HasValue);
             code.Add(_value);
@@ -87,46 +119,69 @@ namespace Inspiring {
                 }
             }
 
-            string items = base.ToString();
+            string items = Utils.FormatItemsShort(_items);
             if (items != "" && s.Length > 0)
                 s.Append(' ');
             s.Append(items);
 
             return s.ToString();
         }
-
-        protected override Result CreateCopy(ImmutableList<IResultItem> items)
-            => new Result<T>(HasValue, _value, items);
-
-        protected override Result InvokeWithoutItems()
-            => WithoutItems();
-
+        
         private void ThrowValueException() {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException(
+                $"The result '{this}' does not have a value. Use 'HasValue' to check if a result has a value.");
         }
+
+        private Result<T> CreateCopy(ImmutableList<IResultItem>? items)
+            => new Result<T>(_hasValue, _value, items);
+
+
+        /************************** CAST OPERATORS ***************************/
 
         public static implicit operator Result<T>(T value)
             => new Result<T>(true, value);
 
         public static implicit operator Result<T>(VoidResult result)
-            => result.MustNotBeNull(nameof(result)).To<T>();
+            => result.To<T>();
 
-        public static Result<T> operator +(Result<T> result, IResultItem item)
-            => result.MustNotBeNull(nameof(result)).Add(item);
+        public static implicit operator Result<T>(ResultItem item)
+            => Result.Empty.Add(item);
+
+        /*********************** RESULT ITEM OPERATORS ***********************/
+
+
+        //public static Result<T> operator +(Result<T> result, IResultItem item)
+        //    => result.Add(item);
+
+
+        /************************** MERGE OPERATORS **************************/
 
         public static Result<T> operator +(Result<T> first, VoidResult second)
-            => (Result<T>)Merge(first, second);
+            => first.CreateCopy(first.Items.AddRange(second.Items));
 
         public static Result<T> operator +(VoidResult first, Result<T> second)
-            => (Result<T>)Merge(first, second);
+            => second.CreateCopy(first.Items.AddRange(second.Items));
 
-        public static Result<T> operator +(Result<T> first, Result<T> second)
-            => (Result<T>)Merge(first, second);
+        public static Result<T> operator +(Result<T> first, Result<T> second) {
+            ImmutableList<IResultItem>? items = first.Items.AddRange(second.Items);
+            return second.HasValue ?
+                second.CreateCopy(items) :
+                first.CreateCopy(items);
+        }
+
+
+        /************************* EQUALITY OPERATORS ************************/
 
         public static bool operator ==(Result<T> x, T y)
             => Equals(x, y);
 
         public static bool operator !=(Result<T> x, T y)
+            => !Equals(x, y);
+
+        public static bool operator ==(Result<T> x, object y)
+            => Equals(x, y);
+
+        public static bool operator !=(Result<T> x, object y)
             => !Equals(x, y);
     }
 }

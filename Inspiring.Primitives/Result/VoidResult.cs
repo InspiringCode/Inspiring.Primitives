@@ -2,42 +2,57 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
 namespace Inspiring {
-    public class VoidResult : Result, IResult<VoidResult> {
-        internal VoidResult(ImmutableList<IResultItem>? items = null) : base(false, items) { }
+    public readonly struct VoidResult : IResult, IResultType<VoidResult> {
+        internal readonly ImmutableList<IResultItem>? _items;
 
-        public new VoidResult Add(IResultItem item)
-            => (VoidResult)base.Add(item);
+        public bool HasValue => false;
 
-        public new VoidResult WithoutItems()
+        internal ImmutableList<IResultItem> Items
+            => _items ?? ImmutableList.Create<IResultItem>();
+
+        internal VoidResult(ImmutableList<IResultItem>? items)
+            => _items = items;
+
+        public VoidResult Add(IResultItem item)
+            => new VoidResult(Items.Add(item));
+
+        public VoidResult WithoutItems()
             => new VoidResult();
 
+        public IEnumerable<TItem> Get<TItem>() where TItem : IResultItem
+            => Items.OfType<TItem>();
+
+        public Result<T> To<T>()
+            => new Result<T>(_items);
+
+        public Result<T> SetTo<T>(T value)
+            => new Result<T>(value, _items);
+
         public override bool Equals(object obj)
-            => obj is VoidResult r && ItemsEqualToItemsOf(r);
+            => obj is VoidResult r && Items.SequenceEqual(r.Items);
 
         public override int GetHashCode() {
-            HashCode code = GetHashcodeOfItems();
+            HashCode code = Utils.GetHashcodeOfItems(_items);
             code.Add(typeof(VoidResult));
             return code.ToHashCode();
         }
 
         public override string ToString() {
-            string items = base.ToString();
+            string items = Utils.FormatItemsShort(_items);
             return items != "" ? items : "<void>";
         }
 
-        protected override Result CreateCopy(ImmutableList<IResultItem> items)
-            => new VoidResult(items);
+        public static implicit operator VoidResult(ResultItem item)
+            => Result.Empty.Add(item);
 
-        protected override Result InvokeWithoutItems()
-            => Empty;
-
-        public static VoidResult operator +(VoidResult result, IResultItem item)
-            => result.MustNotBeNull(nameof(result)).Add(item);
+        //public static VoidResult operator +(VoidResult result, IResultItem item)
+        //    => result.Add(item);
 
         public static VoidResult operator +(VoidResult first, VoidResult second)
-            => (VoidResult)Merge(first, second);
+            => new VoidResult(Utils.Combine(first._items, second._items));
     }
 }

@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using Inspiring.Core;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using System;
 using System.Security.Cryptography;
@@ -14,11 +15,102 @@ namespace Inspiring {
             GIVEN["an item"] |= () => AnItem = new TestItem();
         }
 
+        [Scenario]
+        internal void CastOperations(Result<int> t, VoidResult v) {
+            WHEN["assigning an ResultItem to a void Result"] |= () => v = AnItem;
+            THEN["an void result with that item is created"] |= () => v.Should().HaveItem(AnItem);
+
+            WHEN["assigning an ResultItem to a Result<T>"] |= () => t = AnItem;
+            THEN["an empty result is created"] |= () => t.Should().NotHaveAValue();
+            AND["it contains the item"] |= () => t.Should().HaveItem(AnItem);
+
+            WHEN["assigning a value to a Result<T>"] |= () => t = 1;
+            THEN["it is implicitly casted"] |= () => t.Value.Should().Be(1);
+
+            WHEN["assigning a VoidResult to a Result<T>"] |= () => t = Result.Empty + AnItem;
+            THEN["it is implicitly casted and keeps its items"] |= () => t.Should().HaveItem(AnItem);
+        }
+
+
+        [Scenario]
+        internal void Conversions(Result<string> s, Result<int> i) {
+            WHEN["converting a Result<T> to a Result<U>"] |= () => {
+                s = Result.From("test") + AnItem;
+                i = s.To<int>();
+            };
+            THEN["it has no value"] |= () => i.Should().NotHaveAValue();
+            THEN["it contains all original items"] |= () => i.Should().HaveItem(AnItem);
+        }
+
+
+        [Scenario]
+        internal void ResultCreation(Result<int> t) {
+            WHEN["creating a result from a value"] |= () => t = Result.From(1);
+            THEN["it has the specified value"] |= () => t.Value.Should().Be(1);
+        }
+
+
+        [Scenario]
+        internal void ResultValue(Result<string> t, string value, InvalidOperationException ex) {
+            GIVEN["a result without value"] |= () => t = Result.Of<string>() + new TestItem { Message = "ERROR" };
+            THEN["HasValue is false"] |= () => t.HasValue.Should().BeFalse();
+            AND["Value throws an exception"] |= () => t.
+                Invoking(x => value = x.Value)
+                .Should().Throw<InvalidOperationException>().Which
+                .Message.Should().Be("The result 'ERROR' does not have a value. Use 'HasValue' to check if a result has a value.");
+        }
+
+
+        [Scenario]
+        internal void SetToValue(Result<int> t, VoidResult v, Result<string> actual) {
+            WHEN["setting a value on a void result"] |= () => {
+                v = AnItem;
+                actual = v.SetTo("test");
+            };
+            THEN["the result has the value"] |= () => actual.Should().HaveValue("test");
+            AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
+
+            WHEN["setting a value on a Result<T>"] |= () => {
+                t = 5;
+                t += AnItem;
+                actual = t.SetTo("test");
+            };
+            THEN["the result has the value"] |= () => actual.Should().HaveValue("test");
+            AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
+        }
+
+
+        [Scenario]
+        internal void ResultItems(IResult r, Result<int> t, VoidResult v) {
+            WHEN["adding an item to a generic result"] |= () => {
+                t = 5;
+                t = t + AnItem;
+            };
+            THEN["Get returns the item"] |= () => t.Should().HaveItem(AnItem);
+            AND["the result preserves its value"] |= () => t.Value.Should().Be(5);
+            AND["HasValue is still true"] |= () => t.HasValue.Should().BeTrue();
+
+            WHEN["adding an item to a void result"] |= () => v = AnItem;
+            THEN["Get returns the item"] |= () => v.Should().HaveItem(AnItem);
+
+            WHEN["clearing items on a VoidResult"] |= () => {
+                v = AnItem;
+                v = v.WithoutItems();
+            };
+            THEN["the result has no items"] |= () => v.Should().NotHaveItems();
+            WHEN["clearing items on a Result<T>"] |= () => {
+                t = Result.From(5) + AnItem;
+                t = t.WithoutItems();
+            };
+            THEN["the result has no items"] |= () => t.Should().NotHaveItems();
+        }
+
+
         [Scenario(DisplayName = "Transformation")]
         internal void Transformation(Result<string> s, TestItem item1, TestItem item2) {
             GIVEN["a few items"] |= () => (item1, item2) = (new TestItem(), new TestItem());
             WHEN["the result does not have a value"] |= () => {
-                Result<int> i = Result.Empty + item1;
+                Result<int> i = item1;
                 s = i.Transform(val => val.ToString());
             };
             THEN["the transformation is not executed"] |= () => s.Should()
@@ -79,101 +171,10 @@ namespace Inspiring {
                 => '[' + s + ']';
         }
 
-        [Scenario]
-        internal void CastOperations(Result r, Result<int> t, VoidResult v) {
-            WHEN["assigning a value to a Result<T>"] |= () => t = 1;
-            THEN["it is implicitly casted"] |= () => t.Value.Should().Be(1);
 
-            WHEN["assigning a VoidResult to a Result<T>"] |= () => t = Result.Empty + AnItem;
-            THEN["it is implicitly casted and keeps its items"] |= () => t.Should().HaveItem(AnItem);
-        }
-
-        [Scenario]
-        internal void Conversions(Result<string> s, Result<int> i) {
-            WHEN["converting a Result<T> to a Result<U>"] |= () => {
-                s = Result.From("test") + AnItem;
-                i = s.To<int>();
-            };
-            THEN["it has no value"] |= () => i.Should().NotHaveAValue();
-            THEN["it contains all original items"] |= () => i.Should().HaveItem(AnItem);
-        }
-
-        [Scenario]
-        internal void ResultCreation(Result r, Result<int> t) {
-            WHEN["creating a result from a value"] |= () => t = Result.From(1);
-            THEN["it has the specified value"] |= () => t.Value.Should().Be(1);
-        }
-
-        [Scenario]
-        internal void ResultValue(Result<string> t, string value, InvalidOperationException ex) {
-            GIVEN["a result without value"] |= () => t = Result.Of<string>();
-            THEN["HasValue is false"] |= () => t.HasValue.Should().BeFalse();
-            AND["Value", ThrowsA<InvalidOperationException>()] |= () => value = t.Value;
-
-
-
-            AND["Value throws an exception"] |= () => ex = t.
-                Invoking(x => value = x.Value)
-                .Should().Throw<InvalidOperationException>().Which;
-
-        }
-
-        [Scenario]
-        internal void ResultItems(Result r, Result<int> t, VoidResult v) {
-            WHEN["adding an item to a generic result"] |= () => {
-                t = 5;
-                t += AnItem;
-            };
-            THEN["Get returns the item"] |= () => t.Should().HaveItem(AnItem);
-            AND["the result preserves its value"] |= () => t.Value.Should().Be(5);
-            AND["HasValue is still true"] |= () => t.HasValue.Should().BeTrue();
-
-            WHEN["adding an item to a void result"] |= () => v = Result.Empty + AnItem;
-            THEN["Get returns the item"] |= () => v.Should().HaveItem(AnItem);
-
-            WHEN["adding an item to a base reslut"] |= () => {
-                r = Result.From(5);
-                r += AnItem;
-            };
-            THEN["Get returns the item"] |= () => r.Get<TestItem>().Should().BeEquivalentTo(AnItem);
-            AND["the result keeps its type and value"] |= () => {
-                t = r.Should().BeOfType<Result<int>>().Subject;
-                t.HasValue.Should().BeTrue();
-                t.Value.Should().Be(5);
-            };
-
-            WHEN["clearing items on a VoidResult"] |= () => {
-                r = Result.Empty + AnItem;
-                r = r.WithoutItems();
-            };
-            THEN["the result has no items"] |= () => r.Should().NotHaveItems();
-            WHEN["clearing items on a Result<T>"] |= () => {
-                r = Result.From(5) + AnItem;
-                r = r.WithoutItems();
-            };
-            THEN["the result has no items"] |= () => r.Should().NotHaveItems();
-        }
-
-        [Scenario]
-        internal void SetToValue(Result<int> t, VoidResult v, Result<string> actual) {
-            WHEN["setting a value on a void result"] |= () => {
-                v = Result.Empty + AnItem;
-                actual = v.SetTo("test");
-            };
-            THEN["the result has the value"] |= () => actual.Should().HaveValue("test");
-            AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
-
-            WHEN["setting a value on a Result<T>"] |= () => {
-                t = 5;
-                t += AnItem;
-                actual = t.SetTo("test");
-            };
-            THEN["the result has the value"] |= () => actual.Should().HaveValue("test");
-            AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
-        }
 
         [Scenario(DisplayName = "ToString")]
-        internal void ToStringFormatting(Result r) {
+        internal void ToStringFormatting(IResult r) {
             WHEN["printing a VoidResult without items"] |= () => r = Result.Empty;
             THEN["it prints: <void>"] |= () => r.ToString().Should().Be("<void>");
 
@@ -191,19 +192,19 @@ namespace Inspiring {
         }
 
         [Scenario(DisplayName = "Merge")]
-        internal void Merge(Result r, Result<int> t, TestItem i1, TestItem i2) {
+        internal void Merge(IResult r, Result<int> t, TestItem i1, TestItem i2) {
             GIVEN["two test items"] |= () => (i1, i2) = (new TestItem(), new TestItem());
 
             WHEN["the first result has a value and the second is a VoidResult"] |= () => {
                 Result<int> r1 = Result.From(5) + i1;
-                VoidResult r2 = Result.Empty + i2;
+                VoidResult r2 = i2;
                 t = r1 + r2;
             };
             THEN["the result contains the value of the first"] |= () => t.Should().HaveValue(5);
             AND["it has the items of both"] |= () => t.Should().HaveItemsInOrder(i1, i2);
 
             WHEN["the first result is a VoidResult and the second has a value"] |= () => {
-                VoidResult r1 = Result.Empty + i1;
+                VoidResult r1 = i1;
                 Result<int> r2 = Result.From(5) + i2;
                 t = r1 + r2;
             };
@@ -219,116 +220,101 @@ namespace Inspiring {
             AND["it has the items of both"] |= () => t.Should().HaveItemsInOrder(i1, i2);
 
             WHEN["both results are VoidResult"] |= () => {
-                Result r1 = Result.Empty + i1;
-                VoidResult r2 = Result.Empty + i2;
+                VoidResult r1 = i1;
+                VoidResult r2 = i2;
                 r = r1 + r2;
             };
             THEN["the result is a VoidResult"] |= () => r.Should().BeOfType<VoidResult>();
-            AND["it has the items of both"] |= () => r.Should().HaveItemsInOrder(i1, i2);
-
-            WHEN["both results have no value"] |= () => {
-                Result<DateTime> r1 = Result.Empty + i1;
-                Result<string> r2 = Result.Empty + i2;
-                r = r1 + r2;
-            };
-            THEN["the result is a VoidResult"] |= () => r.Should().BeOfType<Result<string>>();
             AND["it has the items of both"] |= () => r.Should().HaveItemsInOrder(i1, i2);
         }
 
 
         [Scenario(DisplayName = "Equality")]
-        internal void Equality(Result r1, Result r2) {
-            WHEN["comparing a Result<T> with a value to the same value of T"] |= () => r1 = Result.From(5);
-            THEN["it is equal"] |= () => r1.Equals(5).Should().BeTrue();
+        internal void Equality(VoidResult v1, VoidResult v2, Result<string> s1, Result<int> i1, Result<int> i2, Result<object> o1, Result<long> l1, Result<IDisposable> d1) {
+            WHEN["comparing a Result<T> with a value to the same value of T"] |= () => i1 = Result.From(5);
+            THEN["it is equal"] |= () => i1.Equals(5).Should().BeTrue();
 
-            WHEN["comparing a Result<T> with a value to a different value of T"] |= () => r1 = Result.From(5);
-            THEN["it is not equal"] |= () => r1.Equals(6).Should().BeFalse();
+            WHEN["comparing a Result<T> with a value to a different value of T"] |= () => i1 = Result.From(5);
+            THEN["it is not equal"] |= () => i1.Equals(6).Should().BeFalse();
 
-            WHEN["comparing a Result<T> without a value a value of T"] |= () => r1 = Result.Of<int>();
-            THEN["it is not equal"] |= () => r1.Equals(5).Should().BeFalse();
+            WHEN["comparing a Result<T> without a value a value of T"] |= () => i1 = Result.Of<int>();
+            THEN["it is not equal"] |= () => i1.Equals(5).Should().BeFalse();
 
-            WHEN["comparing a Result<reference type> without a value to null"] |= () => r1 = Result.Of<string>();
-            THEN["it is not equal"] |= () => r1.Equals(null).Should().BeFalse();
+            WHEN["comparing a Result<reference type> without a value to null"] |= () => s1 = Result.Of<string>();
+            THEN["it is not equal"] |= () => s1.Equals((object)null).Should().BeFalse();
 
-            WHEN["comparing a Result<reference type> with a null value to null"] |= () => r1 = Result.From<string>(null);
-            THEN["it is equal"] |= () => r1.Equals(null).Should().BeTrue();
+            WHEN["comparing a Result<reference type> with a null value to null"] |= () => s1 = Result.From<string>(null);
+            THEN["it is equal"] |= () => s1.Equals((object)null).Should().BeTrue();
 
-            WHEN["comparing a VoidResult to null"] |= () => r1 = Result.Empty;
-            THEN["it is not equal"] |= () => r1.Equals(null).Should().BeFalse();
+            WHEN["comparing a VoidResult to null"] |= () => v1 = Result.Empty;
+            THEN["it is not equal"] |= () => v1.Equals(null).Should().BeFalse();
 
-            WHEN["comparing a VoidResult to a Result<int>"] |= () => (r1, r2) = (Result.Empty, Result.From(5));
-            THEN["they are never equal"] |= () => assertInequality();
+            WHEN["comparing a VoidResult to a Result<int>"] |= () => (v1, i1) = (Result.Empty, Result.From(5));
+            THEN["they are never equal"] |= () => assertInequality(v1, i1);
 
-            WHEN["comparing a VoidResult to another VoidResult"] |= () => (r1, r2) = (Result.Empty, newVoidInstance());
-            THEN["they are equal only if they have the same items"] |= () => assertEquality();
+            WHEN["comparing a VoidResult to another VoidResult"] |= () => (v1, v2) = (Result.Empty, Result.Empty);
+            THEN["they are equal only if they have the same items"] |= () => assertEquality(v1, v2);
 
-            WHEN["comparing two Result<T> without a value"] |= () => (r1, r2) = (newEmpty<int>(), newEmpty<int>());
-            THEN["they are equal only if they have the same items"] |= () => assertEquality();
+            WHEN["comparing two Result<T> without a value"] |= () => (i1, i2) = (Result.Of<int>(), Result.Of<int>());
+            THEN["they are equal only if they have the same items"] |= () => assertEquality(i1, i2);
 
             WHEN["comparing a Result<T> to an Result<U> with values that are equal"] |= ()
-                => (r1, r2) = (Result.From<string>("test"), Result.From<object>("test"));
-            THEN["they are equal only if they have the same items"] |= () => assertEquality();
+                => (s1, o1) = (Result.From<string>("test"), Result.From<object>("test"));
+            THEN["they are equal only if they have the same items"] |= () => assertEquality(s1, o1);
 
-            WHEN["comparing two Result<T> with different values"] |= () => (r1, r2) = (Result.From(5), Result.From(6));
-            THEN["they are never equal"] |= () => assertInequality();
+            WHEN["comparing two Result<T> with different values"] |= () => (i1, i2) = (Result.From(5), Result.From(6));
+            THEN["they are never equal"] |= () => assertInequality(i1, i2);
 
-            WHEN["comparing a Result<T> to an Result<U> without values"] |= () => (r1, r2) = (Result.Of<int>(), Result.Of<long>());
-            THEN["they are never equal"] |= () => assertInequality(allowHashCodesToBeEqual: true);
+            WHEN["comparing a Result<T> to an Result<U> without values"] |= () => (i1, l1) = (Result.Of<int>(), Result.Of<long>());
+            THEN["they are never equal"] |= () => assertInequality(i1, l1, allowHashCodesToBeEqual: true);
 
-            WHEN["comparing two Result<T> with null values"] |= () => (r1, r2) = (Result.From<string>(null), Result.From<IDisposable>(null));
-            THEN["they are equal"] |= () => assertEquality();
+            WHEN["comparing two Result<T> with null values"] |= () => (s1, d1) = (Result.From<string>(null), Result.From<IDisposable>(null));
+            THEN["they are equal"] |= () => assertEquality(s1, d1);
 
-            Result<string> s = default;
-            WHEN["comparing two results with == and !="] |= () => (s, r2) = ("test", Result.From<object>("test"));
+
+            WHEN["comparing two results with == and !="] |= () => (s1, o1) = ("test", Result.From<object>("test"));
             THEN["the operators behave the same way as Equals"] |= () => {
-                (s == r2).Should().BeTrue();
-                (s != r2).Should().BeFalse();
-                (s == "test").Should().BeTrue();
-                (s != "t").Should().BeTrue();
-                (s == 5).Should().BeFalse();
+                (s1 == o1).Should().BeTrue();
+                (s1 != o1).Should().BeFalse();
+                (s1 == "test").Should().BeTrue();
+                (s1 != "t").Should().BeTrue();
+                (s1 == 5).Should().BeFalse();
 
-                (r2 == "test").Should().BeTrue();
-                (r2 != "t").Should().BeTrue();
+                (o1 == "test").Should().BeTrue();
+                (o1 != "t").Should().BeTrue();
             };
 
-            Result newVoidInstance() {
-                Result r = Result.Empty + AnItem;
-                return r.WithoutItems();
+            void assertEquality<T, U>(T r1, U r2)
+                where T : IResultType<T>
+                where U : IResultType<U> {
+
+                equals(r1, r2).Should().BeTrue();
+                equals(r2, r1).Should().BeTrue();
+                hashcodeEquals(r1, r2).Should().BeTrue();
+
+                equals(r1 + AnItem, r2 + AnItem).Should().BeTrue();
+                equals(r2 + AnItem, r1 + AnItem).Should().BeTrue();
+                hashcodeEquals(r1 + AnItem, r2 + AnItem).Should().BeTrue();
+
+                equals(r1 + AnItem, r2).Should().BeFalse("items don't match");
+                equals(r2 + AnItem, r1).Should().BeFalse("items don't match");
+                hashcodeEquals(r1 + AnItem, r2).Should().BeFalse("items don't match");
             }
 
-            Result newEmpty<T>() {
-                Result r = Result.Of<T>() + AnItem;
-                return r.WithoutItems();
-            }
-
-            void assertEquality() {
-                Equals(r1, r2).Should().BeTrue();
-                Equals(r2, r1).Should().BeTrue();
-                HashcodeEquals(r1, r2).Should().BeTrue();
-
-                Equals(r1 + AnItem, r2 + AnItem).Should().BeTrue();
-                Equals(r2 + AnItem, r1 + AnItem).Should().BeTrue();
-                HashcodeEquals(r1 + AnItem, r2 + AnItem).Should().BeTrue();
-
-                Equals(r1 + AnItem, r2).Should().BeFalse("items don't match");
-                Equals(r2 + AnItem, r1).Should().BeFalse("items don't match");
-                HashcodeEquals(r1 + AnItem, r2).Should().BeFalse("items don't match");
-            }
-
-            void assertInequality(bool allowHashCodesToBeEqual = false) {
-                Equals(r1, r2).Should().BeFalse();
+            void assertInequality(IResult r1, IResult r2, bool allowHashCodesToBeEqual = false) {
+                equals(r1, r2).Should().BeFalse();
                 if (!allowHashCodesToBeEqual)
-                    HashcodeEquals(r1, r2).Should().BeFalse();
+                    hashcodeEquals(r1, r2).Should().BeFalse();
             }
 
-            bool HashcodeEquals(Result r1, Result r2)
+            bool hashcodeEquals(IResult r1, IResult r2)
                 => r1.GetHashCode() == r2.GetHashCode();
 
-            bool Equals(Result r1, Result r2)
+            bool equals(IResult r1, IResult r2)
                 => r1.Equals(r2);
         }
 
-        internal class TestItem : IResultItem, IResultItemInfo {
+        internal class TestItem : ResultItem, IResultItemInfo {
             public string Message { get; set; }
 
             public bool IsError { get; set; }
