@@ -41,6 +41,9 @@ namespace Inspiring {
             _hasValue = hasValue;
         }
 
+
+        /**************************** ITEM METHODS ***************************/
+
         public Result<T> Add(IResultItem item)
             => new Result<T>(_hasValue, _value, Items.Add(item));
 
@@ -50,8 +53,11 @@ namespace Inspiring {
         public IEnumerable<TItem> Get<TItem>() where TItem : IResultItem
             => Items.OfType<TItem>();
 
-        public VoidResult ToVoid()
-            => new VoidResult(_items);
+
+        /*************************** VALUE METHODS ***************************/
+
+        public Result ToVoid()
+            => new Result(_items);
 
         public Result<U> To<U>()
             => new Result<U>(_items);
@@ -59,13 +65,18 @@ namespace Inspiring {
         public Result<U> SetTo<U>(U value)
             => new Result<U>(value, _items);
 
-        public Result<U> Transform<U>(Func<T, Result<U>> transformation) {
-            return HasValue ?
+
+        /*********************** TRANSFORMATION METHODS **********************/
+
+        public Result<U> Transform<U>(Func<T, Result<U>> transformation) => 
+            HasValue ?
                 ToVoid() + transformation(Value) :
                 To<U>();
-        }
-        public Result<U> Transform<U>(Func<T, U> transformation)
-            => Transform(value => Result.From(transformation(value)));
+
+        public Result<U> Transform<U>(Func<T, U> transformation) => 
+            HasValue ?
+                ToVoid() + Result.From(transformation(Value)) :
+                To<U>();
 
         [EditorBrowsable(EditorBrowsableState.Never)]
         public Result<R> SelectMany<U, R>(Func<T, Result<U>> transformation, Func<T, U, R> resultSelector) {
@@ -77,6 +88,8 @@ namespace Inspiring {
                 transformed.SetTo(resultSelector(Value, transformed.Value)) :
                 transformed.To<R>();
         }
+
+        /****************************** EQUALITY *****************************/
 
         public bool Equals(Result<T> other) =>
             _hasValue == other._hasValue &&
@@ -99,12 +112,15 @@ namespace Inspiring {
         }
 
         public override int GetHashCode() {
-            HashCode code = Utils.GetHashcodeOfItems(_items);
+            HashCode code = Result.GetItemsHashCode(Items);
             code.Add(typeof(Result<>));
             code.Add(HasValue);
             code.Add(_value);
             return code.ToHashCode();
         }
+
+
+        /****************************** TOSTRING *****************************/
 
         public override string ToString() {
             StringBuilder s = new StringBuilder();
@@ -119,14 +135,17 @@ namespace Inspiring {
                 }
             }
 
-            string items = Utils.FormatItemsShort(_items);
+            string items = Result.FormatItemsShort(Items);
             if (items != "" && s.Length > 0)
                 s.Append(' ');
             s.Append(items);
 
             return s.ToString();
         }
-        
+
+
+        /************************** PRIVATE METHODS **************************/
+
         private void ThrowValueException() {
             throw new InvalidOperationException(
                 $"The result '{this}' does not have a value. Use 'HasValue' to check if a result has a value.");
@@ -141,25 +160,19 @@ namespace Inspiring {
         public static implicit operator Result<T>(T value)
             => new Result<T>(true, value);
 
-        public static implicit operator Result<T>(VoidResult result)
+        public static implicit operator Result<T>(Result result)
             => result.To<T>();
 
         public static implicit operator Result<T>(ResultItem item)
-            => Result.Empty.Add(item);
-
-        /*********************** RESULT ITEM OPERATORS ***********************/
-
-
-        //public static Result<T> operator +(Result<T> result, IResultItem item)
-        //    => result.Add(item);
+            => new Result<T>(ImmutableList.Create<IResultItem>(item));
 
 
         /************************** MERGE OPERATORS **************************/
 
-        public static Result<T> operator +(Result<T> first, VoidResult second)
+        public static Result<T> operator +(Result<T> first, Result second)
             => first.CreateCopy(first.Items.AddRange(second.Items));
 
-        public static Result<T> operator +(VoidResult first, Result<T> second)
+        public static Result<T> operator +(Result first, Result<T> second)
             => second.CreateCopy(first.Items.AddRange(second.Items));
 
         public static Result<T> operator +(Result<T> first, Result<T> second) {
