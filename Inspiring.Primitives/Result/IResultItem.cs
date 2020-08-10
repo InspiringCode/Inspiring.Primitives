@@ -6,7 +6,7 @@ namespace Inspiring {
     public interface IResultItem {
     }
 
-    public interface IResultItemInfo{
+    public interface IResultItemInfo {
         bool IsError { get; }
     }
 }

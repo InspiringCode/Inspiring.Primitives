@@ -1,9 +1,7 @@
 ﻿using FluentAssertions.Execution;
 using FluentAssertions.Primitives;
 using Inspiring;
-using Inspiring.Core;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -77,27 +75,5 @@ namespace FluentAssertions {
 
             return new AndConstraint<ResultAssertions<T>>(this);
         }
-
-        //public AndConstraint<ResultAssertions<T>> BeSuccessful() {
-        //    Execute.Assertion
-        //        .ForCondition(!Subject.HasErrors)
-        //        .FailWith("Expected result to be successful but has errors {0}.", Subject.Errors())
-        //        .Then
-        //        .ForCondition(!Subject.HasWarnings())
-        //        .FailWith("Expected result to be successful but has warnings {0}.", Subject.Warnings());
-
-        //    return new AndConstraint<ResultAssertions<T>>(this);
-        //}
-
-        //public AndConstraint<ResultAssertions<T>> HaveInfo(string message, params object[] args)
-        //    => HaveLogEntry("an info", Subject.Infos(), message, args);
-
-        //public AndConstraint<ResultAssertions<T>> HaveWarning(string message, params object[] args)
-        //    => HaveLogEntry("a warning", Subject.Warnings(), message, args);
-
-        //public AndConstraint<ResultAssertions<T>> HaveError(string message, params object[] args)
-        //    => HaveLogEntry("an error", Subject.Errors(), message, args);
-
-
     }
 }

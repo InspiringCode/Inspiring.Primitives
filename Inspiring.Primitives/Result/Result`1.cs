@@ -1,12 +1,10 @@
-﻿using Inspiring.Core;
+﻿using Inspiring.Primitives.Core;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using System.Threading;
 
 namespace Inspiring {
     public readonly struct Result<T> : IResult, IResultType<Result<T>>, IEquatable<Result<T>> {
@@ -28,9 +26,13 @@ namespace Inspiring {
             }
         }
 
+        public bool HasErrors => Items
+            .OfType<IResultItemInfo>()
+            .Any(i => i.IsError);
+
         internal Result(ImmutableList<IResultItem>? items)
             : this(false, default!, items) { }
-            
+
 
         internal Result(T value, ImmutableList<IResultItem>? items)
             : this(true, value, items) { }
@@ -49,7 +51,7 @@ namespace Inspiring {
 
         public Result<T> WithoutItems()
             => new Result<T>(_hasValue, _value, null);
-        
+
         public IEnumerable<TItem> Get<TItem>() where TItem : IResultItem
             => Items.OfType<TItem>();
 
@@ -68,12 +70,12 @@ namespace Inspiring {
 
         /*********************** TRANSFORMATION METHODS **********************/
 
-        public Result<U> Transform<U>(Func<T, Result<U>> transformation) => 
+        public Result<U> Transform<U>(Func<T, Result<U>> transformation) =>
             HasValue ?
                 ToVoid() + transformation(Value) :
                 To<U>();
 
-        public Result<U> Transform<U>(Func<T, U> transformation) => 
+        public Result<U> Transform<U>(Func<T, U> transformation) =>
             HasValue ?
                 ToVoid() + Result.From(transformation(Value)) :
                 To<U>();

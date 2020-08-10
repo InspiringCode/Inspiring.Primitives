@@ -1,7 +1,7 @@
 ﻿#pragma warning disable CS0660 // Type defines operator == or operator != but does not override Object.Equals(object o)
 #pragma warning disable CS0661 // Type defines operator == or operator != but does not override Object.GetHashCode()
 
-using Inspiring.Core;
+using Inspiring.Primitives.Core;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -14,6 +14,10 @@ namespace Inspiring {
         internal readonly ImmutableList<IResultItem>? _items;
 
         public bool HasValue => false;
+        
+        public bool HasErrors => Items
+            .OfType<IResultItemInfo>()
+            .Any(i => i.IsError);
 
         internal ImmutableList<IResultItem> Items
             => _items ?? ImmutableList.Create<IResultItem>();
@@ -110,7 +114,7 @@ namespace Inspiring {
                 _ => $"{items.Last()} (and {items.Count - 1} more items)"
             };
         }
-        
+
         internal static HashCode GetItemsHashCode(IImmutableList<IResultItem> items) {
             HashCode code = new HashCode();
             foreach (IResultItem item in items)

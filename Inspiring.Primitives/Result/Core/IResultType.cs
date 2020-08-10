@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Inspiring.Core {
+namespace Inspiring.Primitives.Core {
     public interface IResultType<TResultType> : IResult {
         TResultType Add(IResultItem item);
 

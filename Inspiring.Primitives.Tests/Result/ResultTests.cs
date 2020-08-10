@@ -1,5 +1,5 @@
 ﻿using FluentAssertions;
-using Inspiring.Core;
+using Inspiring.Primitives.Core;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using System;
 using System.Security.Cryptography;
@@ -105,6 +105,19 @@ namespace Inspiring {
             THEN["the result has no items"] |= () => t.Should().NotHaveItems();
         }
 
+        internal void HasError(Result v, Result<int> i) {
+            WHEN["a void result has no error items"] |= () => v = AnItem;
+            THEN["HasErrors is false"] |= () => v.HasErrors.Should().BeFalse();
+
+            WHEN["a value result has no items"] |= () => i = AnItem;
+            THEN["HasErrors is false"] |= () => i.HasErrors.Should().BeFalse();
+
+            WHEN["a void result has an error item"] |= () => v += new TestItem { IsError = true };
+            THEN["HasErrors is true"] |= () => v.HasErrors.Should().BeTrue();
+
+            WHEN["a value result has an error item"] |= () => i += new TestItem { IsError = true };
+            THEN["HasErrors is true"] |= () => i.HasErrors.Should().BeTrue();
+        }
 
         [Scenario(DisplayName = "Equality")]
         internal void Equality(Result v1, Result v2, Result<string> s1, Result<int> i1, Result<int> i2, Result<object> o1, Result<long> l1, Result<IDisposable> d1) {
