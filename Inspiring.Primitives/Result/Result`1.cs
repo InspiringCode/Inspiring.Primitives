@@ -68,6 +68,9 @@ namespace Inspiring {
         public Result<U> SetTo<U>(U value)
             => new Result<U>(value, _items);
 
+        public Result<T> Or(T defaultValue) =>
+            HasValue ? this : SetTo(defaultValue);
+
 
         /*********************** TRANSFORMATION METHODS **********************/
 

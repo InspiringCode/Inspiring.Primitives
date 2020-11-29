@@ -72,13 +72,24 @@ namespace Inspiring {
 
 
         [Scenario]
-        internal void ResultValue(Result<string> t, string value, InvalidOperationException ex) {
+        internal void Value(Result<string> t, string value, InvalidOperationException ex) {
             GIVEN["a result without value"] |= () => t = Result.Of<string>() + new TestItem { Message = "ERROR" };
             THEN["HasValue is false"] |= () => t.HasValue.Should().BeFalse();
-            AND["Value throws an exception"] |= () => t.
-                Invoking(x => value = x.Value)
+            AND["Value throws an exception"] |= () => t
+                .Invoking(x => value = x.Value)
                 .Should().Throw<InvalidOperationException>().Which
                 .Message.Should().Be("The result 'ERROR' does not have a value. Use 'HasValue' to check if a result has a value.");
+
+            GIVEN["a result with a value"] |= () => t = Result.From("original") + AnItem;
+            WHEN["calling Or"] |= () => t = t.Or("default");
+            THEN["the original result with all its items is returned"] |= () => t
+                .Should().HaveValue("original")
+                .And.HaveItem(AnItem);
+            GIVEN["a result without a value"] |= () => t = AnItem;
+            WHEN["calling Or"] |= () => t = t.Or("default");
+            THEN["a result with the default value and the orignal result items is returned"] |= () => t
+                .Should().HaveValue("default")
+                .And.HaveItem(AnItem);
         }
 
 
