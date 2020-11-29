@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Xbehave;
 
 namespace Inspiring {
@@ -16,9 +17,22 @@ namespace Inspiring {
         }
 
         [Scenario]
+        internal void NothingTests(Nothing n, object res) {
+            CUSTOM["A Nothing does not have errors, items or a value"] |= () => n
+                .Should().NotHaveItems().And.NotHaveErrors().And.NotHaveAValue();
+
+            WHEN["adding an item to a Nothing"] |= () => res = n.Add(AnItem);
+            THEN["a Result with the item is returned"] |= () => res
+                .Should().BeOfType<Result>().Which.Should().HaveItem(AnItem);
+
+            WHEN["calling WithoutItems on a Nothing"] |= () => res = n.WithoutItems();
+            THEN["an empty result is returned"] |= () => res.Should().Be(Result.Empty);
+        }
+
+        [Scenario]
         internal void CastOperations(Result<int> t, Result v) {
             WHEN["assigning an ResultItem to a void Result"] |= () => v = AnItem;
-            THEN["an void result with that item is created"] |= () => v.Should().HaveItem(AnItem);
+            THEN["a void result with that item is created"] |= () => v.Should().HaveItem(AnItem);
 
             WHEN["assigning an ResultItem to a Result<T>"] |= () => t = AnItem;
             THEN["an empty result is created"] |= () => t.Should().NotHaveAValue();
@@ -29,6 +43,11 @@ namespace Inspiring {
 
             WHEN["assigning a VoidResult to a Result<T>"] |= () => t = Result.Empty + AnItem;
             THEN["it is implicitly casted and keeps its items"] |= () => t.Should().HaveItem(AnItem);
+
+            var x = v + (Result<int>)5;
+
+            WHEN["assigning a Nothing to a Result"] |= () => v = new Nothing();
+            THEN["the result has no errors and no items"] |= () => v.Should().NotHaveItems().And.NotHaveErrors();
         }
 
 
@@ -120,7 +139,17 @@ namespace Inspiring {
         }
 
         [Scenario(DisplayName = "Equality")]
-        internal void Equality(Result v1, Result v2, Result<string> s1, Result<int> i1, Result<int> i2, Result<object> o1, Result<long> l1, Result<IDisposable> d1) {
+        internal void Equality(
+            Result v1,
+            Result v2,
+            Result<string> s1,
+            Result<int> i1,
+            Result<int> i2,
+            Result<object> o1,
+            Result<long> l1, 
+            Result<IDisposable> d1,
+            Nothing n
+        ) {
             WHEN["comparing a Result<T> with a value to the same value of T"] |= () => i1 = Result.From(5);
             THEN["it is equal"] |= () => i1.Equals(5).Should().BeTrue();
 
@@ -161,7 +190,12 @@ namespace Inspiring {
             WHEN["comparing two Result<T> with null values"] |= () => (s1, d1) = (Result.From<string>(null), Result.From<IDisposable>(null));
             THEN["they are equal"] |= () => assertEquality(s1, d1);
 
+            WHEN["comparing a Result to a Nothing"] |= () => (v1, n) = (Result.Empty, Result.Nothing);
+            THEN["they are never equal"] |= () => assertInequality(v1, n);
 
+            WHEN["comparing two nothings THEN the are equal"] |= () => assertEqualityCore<Nothing, Nothing, Result, Result>(new Nothing(), new Nothing());
+
+            
             WHEN["comparing two results with == and !="] |= () => (s1, o1) = ("test", Result.From<object>("test"));
             THEN["the operators behave the same way as Equals"] |= () => {
                 (s1 == o1).Should().BeTrue();
@@ -177,6 +211,15 @@ namespace Inspiring {
             void assertEquality<T, U>(T r1, U r2)
                 where T : IResultType<T>
                 where U : IResultType<U> {
+
+                assertEqualityCore<T, U, T, U>(r1, r2);
+            }
+
+            void assertEqualityCore<R, S, T, U>(R r1, S r2)
+                where R : IResultType<T>
+                where S : IResultType<U>
+                where T: IResult
+                where U : IResult {
 
                 equals(r1, r2).Should().BeTrue();
                 equals(r2, r1).Should().BeTrue();
@@ -269,15 +312,16 @@ namespace Inspiring {
                 => '[' + s + ']';
         }
 
-
-
         [Scenario(DisplayName = "ToString")]
         internal void ToStringFormatting(IResult r) {
             WHEN["printing a VoidResult without items"] |= () => r = Result.Empty;
             THEN["it prints: <void>"] |= () => r.ToString().Should().Be("<void>");
 
-            WHEN["printing a result with a value but without items"] |= () => r = Result.From("VALUE");
-            THEN["it prints only the value"] |= () => r.ToString().Should().Be("[VALUE]");
+            WHEN["printing a result with a value but without items"] |= () => r = Result.From(5);
+            THEN["it prints only the value"] |= () => r.ToString().Should().Be("[5]");
+
+            WHEN["the value is a string"] |= () => r = Result.From("test");
+            THEN["the string is enclosed with quotes"] |= () => r.ToString().Should().Be("[\"test\"]");
 
             WHEN["printing a result with value and item"] |= () => r = Result.From(5)
                 + new TestItem { IsError = true, Message = "Error" };
@@ -287,6 +331,9 @@ namespace Inspiring {
                 + new TestItem { IsError = true, Message = "Error" }
                 + new TestItem { IsError = false, Message = "Info" };
             THEN["it prints only the last message"] |= () => r.ToString().Should().Be("Info (and 1 more items)");
+
+            WHEN["printing a Nothing result"] |= () => r = new Nothing();
+            THEN["it just prints the string 'Nothing'"] |= () => r.ToString().Should().Be("Nothing");
         }
 
         [Scenario(DisplayName = "Merge")]
@@ -324,6 +371,18 @@ namespace Inspiring {
             };
             THEN["the result is a VoidResult"] |= () => r.Should().BeOfType<Result>();
             AND["it has the items of both"] |= () => r.Should().HaveItemsInOrder(i1, i2);
+        }
+
+        [Scenario(DisplayName = "Task Support")]
+        internal void ImplictTaskSupport(Task<Result> vt, Result v, Task<Result<string>> st, Result<string> s) {
+            WHEN["assigning a void result to a task"] |= () => vt = (v = AnItem);
+            THEN["a completed task is implicitly created"] |= () => vt.Result.Should().Be(v);
+
+            WHEN["assigning a value result to a task"] |= () => st = (s = "test");
+            THEN["a completed task is implicitly created"] |= () => st.Result.Should().Be(s);
+
+            WHEN["assining a result item to a task"] |= () => vt = AnItem;
+            THEN["a completed task is implicitly created"] |= () => vt.Result.Should().Be(Result.Empty + AnItem);
         }
 
         internal class TestItem : ResultItem, IResultItemInfo {

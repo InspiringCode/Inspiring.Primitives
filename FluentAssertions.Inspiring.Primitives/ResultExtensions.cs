@@ -1,4 +1,5 @@
-﻿using FluentAssertions.Execution;
+﻿using FluentAssertions.Common;
+using FluentAssertions.Execution;
 using FluentAssertions.Primitives;
 using Inspiring;
 using System;
@@ -31,13 +32,6 @@ namespace FluentAssertions {
                 .FailWith("Expected result to have value {0}{reason}, but found {1}.", expected, ass.Subject);
 
             return new AndWhichConstraint<ResultAssertions<Result<T>>, T>(ass, ass.Subject.Value);
-        }
-        public static AndConstraint<ResultAssertions<Result<T>>> NotHaveAValue<T>(this ResultAssertions<Result<T>> ass) {
-            Execute.Assertion
-                .ForCondition(!ass.Subject.HasValue)
-                .FailWith("Expected result to not have any value.");
-
-            return new AndConstraint<ResultAssertions<Result<T>>>(ass);
         }
     }
 
@@ -72,6 +66,45 @@ namespace FluentAssertions {
             Execute.Assertion
                 .ForCondition(!Subject.Get<IResultItem>().Any())
                 .FailWith("Expected result to not contain any result items, but result contains: {0}.", Subject.Get<IResultItem>());
+
+            return new AndConstraint<ResultAssertions<T>>(this);
+        }
+
+        public AndConstraint<ResultAssertions<T>> NotHaveErrors() {
+            Execute.Assertion
+                .ForCondition(!Subject.HasErrors)
+                .FailWith(
+                    "Expected result not to contain any errors, but found: {0}.",
+                    Subject
+                        .Get<IResultItem>()
+                        .OfType<IResultItemInfo>()
+                        .Where(x => x.IsError));
+
+            return new AndConstraint<ResultAssertions<T>>(this);
+        }
+
+        public AndConstraint<ResultAssertions<T>> NotHaveAValue() {
+            Execute.Assertion
+                .ForCondition(!Subject.HasValue)
+                .FailWith("Expected result to not have any value.");
+
+            return new AndConstraint<ResultAssertions<T>>(this);
+        }
+
+        public AndConstraint<ResultAssertions<T>> Be(T expected, string because = "", params object[] becauseArgs) {
+            Execute.Assertion
+                .BecauseOf(because, becauseArgs)
+                .ForCondition(Subject.IsSameOrEqualTo(expected))
+                .FailWith("Expected result to be {0}{reason}, but found {1}.", expected, Subject);
+
+            return new AndConstraint<ResultAssertions<T>>(this);
+        }
+
+        public AndConstraint<ResultAssertions<T>> NotBe(T unexpected, string because = "", params object[] becauseArgs) {
+            Execute.Assertion
+                .ForCondition(!Subject.IsSameOrEqualTo(unexpected))
+                .BecauseOf(because, becauseArgs)
+                .FailWith("Did not expect {context:result} to be equal to {0}{reason}.", unexpected);
 
             return new AndConstraint<ResultAssertions<T>>(this);
         }

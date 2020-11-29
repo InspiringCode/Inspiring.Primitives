@@ -6,6 +6,19 @@
     <Nullable>enable</Nullable>
     <AssemblyName>InspiringPrimitives</AssemblyName>
     <RootNamespace>Inspiring</RootNamespace>
+    <PackageId>Inspiring.Primitives</PackageId>
+    <Version>1.0.0-alpha.1</Version>
+    <Authors>Daniel Berghold</Authors>
+    <Company>InspiringCode</Company>
+    <Product>Inspiring.Primitives</Product>
+    <Copyright>InspiringCode</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/InspiringCode/Inspiring.Primitives/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/InspiringCode/Inspiring.Primitives/</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <Description>A Result and Result&lt;T&gt; class (monad style) that represent an optional result value with arbitrary additional items (e.g. errors).</Description>
+    <PackageTags>result monad optional maybe either nullable</PackageTags>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">

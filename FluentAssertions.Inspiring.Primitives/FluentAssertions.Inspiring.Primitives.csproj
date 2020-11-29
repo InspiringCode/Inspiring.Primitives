@@ -2,6 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>1.0.0-alpha.1</Version>
+    <Authors>Daniel Berghold</Authors>
+    <Company>InspiringCode</Company>
+    <Description>FluentAssertions extensions for the Result and Result&lt;T&gt; class of Inspiring.Primitives.</Description>
+    <Copyright>InspiringCode</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/InspiringCode/Inspiring.Primitives/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/InspiringCode/Inspiring.Primitives/</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>fluent-assertions</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

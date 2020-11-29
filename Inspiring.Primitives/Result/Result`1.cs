@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Inspiring {
     public readonly struct Result<T> : IResult, IResultType<Result<T>>, IEquatable<Result<T>> {
@@ -47,7 +48,7 @@ namespace Inspiring {
         /**************************** ITEM METHODS ***************************/
 
         public Result<T> Add(IResultItem item)
-            => new Result<T>(_hasValue, _value, Items.Add(item));
+            => new Result<T>(_hasValue, _value, Items.Add(item.MustNotBeNull(nameof(item))));
 
         public Result<T> WithoutItems()
             => new Result<T>(_hasValue, _value, null);
@@ -132,7 +133,13 @@ namespace Inspiring {
                     s.Append("[<null>]");
                 } else {
                     s.Append('[');
-                    s.Append(_value);
+                    if (_value is string) {
+                        s.Append('"');
+                        s.Append(_value);
+                        s.Append('"');
+                    } else {
+                        s.Append(_value);
+                    }
                     s.Append(']');
                 }
             }
@@ -167,6 +174,9 @@ namespace Inspiring {
 
         public static implicit operator Result<T>(ResultItem item)
             => new Result<T>(ImmutableList.Create<IResultItem>(item));
+
+        public static implicit operator Task<Result<T>>(Result<T> result)
+            => Task.FromResult(result);
 
 
         /************************** MERGE OPERATORS **************************/
