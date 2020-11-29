@@ -196,8 +196,7 @@ namespace Inspiring {
             THEN["they are never equal"] |= () => assertInequality(v1, n);
 
             WHEN["comparing two nothings THEN the are equal"] |= () => assertEqualityCore<Nothing, Nothing, Result, Result>(new Nothing(), new Nothing());
-
-            
+                        
             WHEN["comparing two results with == and !="] |= () => (s1, o1) = ("test", Result.From<object>("test"));
             THEN["the operators behave the same way as Equals"] |= () => {
                 (s1 == o1).Should().BeTrue();
@@ -238,6 +237,7 @@ namespace Inspiring {
 
             void assertInequality(IResult r1, IResult r2, bool allowHashCodesToBeEqual = false) {
                 equals(r1, r2).Should().BeFalse();
+                equals(r2, r1).Should().BeFalse();
                 if (!allowHashCodesToBeEqual)
                     hashcodeEquals(r1, r2).Should().BeFalse();
             }
