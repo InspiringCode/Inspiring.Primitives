@@ -11,9 +11,11 @@ namespace Inspiring {
     public class ResultTests : Feature {
         private TestItem AnItem { get; set; }
 
+        private TestItem AnotherItem { get; set; }
+
         [Background]
         public void Background() {
-            GIVEN["an item"] |= () => AnItem = new TestItem();
+            GIVEN["some items"] |= () => (AnItem, AnotherItem) = (new TestItem(), new TestItem());
         }
 
         [Scenario]
@@ -371,6 +373,16 @@ namespace Inspiring {
             };
             THEN["the result is a VoidResult"] |= () => r.Should().BeOfType<Result>();
             AND["it has the items of both"] |= () => r.Should().HaveItemsInOrder(i1, i2);
+        }
+
+        [Scenario(DisplayName = "Combine")]
+        internal void CombiningResult(Result v, Result<string> s) {
+            WHEN["combining some void results"] |= () => v = new [] { new Result(), AnItem, AnotherItem }.Combine();
+            THEN["a void result with all items is returned"] |= () => v.Should().HaveItemsInOrder(AnItem, AnotherItem);
+
+            WHEN["combining some value results"] |= () => s = new[] { Result.From("first"), AnItem, "last", AnotherItem, Result.Empty }.Combine();
+            THEN["the result has the value of the last result that has a value"] |= () => s.Should().HaveValue("last");
+            AND["it contains all result items"] |= () => s.Should().HaveItemsInOrder(AnItem, AnotherItem);
         }
 
         [Scenario(DisplayName = "Task Support")]
