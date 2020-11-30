@@ -172,6 +172,9 @@ namespace Inspiring {
         public static implicit operator Result<T>(T value)
             => new Result<T>(true, value);
 
+        public static implicit operator T(Result<T> result)
+            => result.Value;
+
         public static implicit operator Result<T>(Result result)
             => result.To<T>();
 

@@ -1,9 +1,7 @@
 ﻿using FluentAssertions;
 using Inspiring.Primitives.Core;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using System;
-using System.Security.Cryptography;
-using System.Text;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Xbehave;
 
@@ -159,7 +157,7 @@ namespace Inspiring {
             Result<int> i1,
             Result<int> i2,
             Result<object> o1,
-            Result<long> l1, 
+            Result<long> l1,
             Result<IDisposable> d1,
             Nothing n
         ) {
@@ -207,7 +205,7 @@ namespace Inspiring {
             THEN["they are never equal"] |= () => assertInequality(v1, n);
 
             WHEN["comparing two nothings THEN the are equal"] |= () => assertEqualityCore<Nothing, Nothing, Result, Result>(new Nothing(), new Nothing());
-                        
+
             WHEN["comparing two results with == and !="] |= () => (s1, o1) = ("test", Result.From<object>("test"));
             THEN["the operators behave the same way as Equals"] |= () => {
                 (s1 == o1).Should().BeTrue();
@@ -230,7 +228,7 @@ namespace Inspiring {
             void assertEqualityCore<R, S, T, U>(R r1, S r2)
                 where R : IResultType<T>
                 where S : IResultType<U>
-                where T: IResult
+                where T : IResult
                 where U : IResult {
 
                 equals(r1, r2).Should().BeTrue();
@@ -387,12 +385,24 @@ namespace Inspiring {
         }
 
         [Scenario(DisplayName = "Combine")]
-        internal void CombiningResult(Result v, Result<string> s) {
-            WHEN["combining some void results"] |= () => v = new [] { new Result(), AnItem, AnotherItem }.Combine();
+        internal void CombiningResult(Result v, Result<string> s, Result<ImmutableList<string>> combined) {
+            WHEN["combining some void results"] |= () => v = new[] { new Result(), AnItem, AnotherItem }.Combine();
             THEN["a void result with all items is returned"] |= () => v.Should().HaveItemsInOrder(AnItem, AnotherItem);
 
-            WHEN["combining some value results"] |= () => s = new[] { Result.From("first"), AnItem, "last", AnotherItem, Result.Empty }.Combine();
+            WHEN["combining some value results"] |= () => s = new[] { Result.From("first"), AnItem, Result.From("last") + AnotherItem, Result.Empty }.Combine();
             THEN["the result has the value of the last result that has a value"] |= () => s.Should().HaveValue("last");
+            AND["it contains all result items"] |= () => s.Should().HaveItemsInOrder(AnItem, AnotherItem);
+
+            WHEN["combining some values with a seed and a value selector"] |= () => combined =
+                new Result<string>[] { "first", AnItem, "second", Result.From("third") + AnotherItem, Result.Empty }
+                    .Combine(ImmutableList.Create<string>(), (list, val) => list.Add(val));
+            THEN["the result has the aggregated value"] |= () => combined.Value.Should().BeEquivalentTo("first", "second", "third");
+            AND["it contains all result items"] |= () => s.Should().HaveItemsInOrder(AnItem, AnotherItem);
+
+            WHEN["combining some values with just a value selector"] |= () => s =
+                new Result<string>[] { "A", AnItem, "B", Result.From("C") + AnotherItem, Result.Empty }
+                    .Combine((agg, val) => agg + " " + val);
+            THEN["the result has the aggregated value"] |= () => s.Should().HaveValue("A B C");
             AND["it contains all result items"] |= () => s.Should().HaveItemsInOrder(AnItem, AnotherItem);
         }
 
