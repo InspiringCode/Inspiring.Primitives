@@ -3,7 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Inspiring {
-    public static class EnumerableExtensions {
+    public static class ResultExtensions {
+        public static IEnumerable<TItem> Get<TItem>(this IResult result, Func<TItem, bool> predicate) where TItem : IResultItem {
+            result.MustNotBeNull(nameof(result));
+            predicate.MustNotBeNull(nameof(predicate));
+            return result.Get<TItem>().Where(predicate);
+        }
+
+        public static bool Has<TItem>(this IResult result, Func<TItem, bool>? predicate = null) where TItem : IResultItem {
+            result.MustNotBeNull(nameof(result));
+            return result.Get<TItem>().Any(predicate ?? (_ => true));
+        }
+
         public static Result Combine(this IEnumerable<Result> results) => results
             .MustNotBeNull(nameof(results))
             .Aggregate((agg, next) => agg + next);

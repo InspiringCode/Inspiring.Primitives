@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace Inspiring {
-    public readonly struct Result : IResultType<Result>, IEquatable<Result> {
+    public readonly struct Result : IEditableResult<Result>, IEquatable<Result> {
         public static readonly Result Empty = new Result();
         public static readonly Nothing Nothing = new Nothing();
 

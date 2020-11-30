@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Inspiring {
-    public struct Nothing : IResult, IResultType<Result>, IEquatable<Nothing> {
+    public struct Nothing : IResult, IEditableResult<Result>, IEquatable<Nothing> {
         public bool HasValue => false;
 
         public bool HasErrors => false;

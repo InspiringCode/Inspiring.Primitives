@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Inspiring {
-    public readonly struct Result<T> : IResult, IResultType<Result<T>>, IEquatable<Result<T>> {
+    public readonly struct Result<T> : IResult, IEditableResult<Result<T>>, IEquatable<Result<T>> {
         private readonly ImmutableList<IResultItem>? _items;
         private readonly T _value;
         private readonly bool _hasValue;

@@ -219,15 +219,15 @@ namespace Inspiring {
             };
 
             void assertEquality<T, U>(T r1, U r2)
-                where T : IResultType<T>
-                where U : IResultType<U> {
+                where T : IEditableResult<T>
+                where U : IEditableResult<U> {
 
                 assertEqualityCore<T, U, T, U>(r1, r2);
             }
 
             void assertEqualityCore<R, S, T, U>(R r1, S r2)
-                where R : IResultType<T>
-                where S : IResultType<U>
+                where R : IEditableResult<T>
+                where S : IEditableResult<U>
                 where T : IResult
                 where U : IResult {
 
