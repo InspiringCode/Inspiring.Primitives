@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Inspiring {
     public static class EnumerableExtensions {
@@ -34,23 +33,11 @@ namespace Inspiring {
             this IEnumerable<Result<T>> results,
             Func<T, T, T> func
         ) {
-            Result<T> agg = new();
-
-            using IEnumerator<Result<T>> e = results.GetEnumerator();
-            while (e.MoveNext()) {
-                agg += e.Current;
-
-                if (agg.HasValue) {
-                    while (e.MoveNext()) {
-                        agg += e.Current.ToVoid();
-
-                        if (e.Current.HasValue)
-                            agg = agg.SetTo(func(agg, e.Current.Value));
-                    }
-                }
-            }
-
-            return agg;
+            func.MustNotBeNull(nameof(func));
+            return results.Aggregate(seed: new Result<T>(), (acc, x) =>
+                acc.HasValue && x.HasValue ?
+                    (acc + x).SetTo(func(acc, x)) :
+                    (acc + x));
         }
     }
 }
