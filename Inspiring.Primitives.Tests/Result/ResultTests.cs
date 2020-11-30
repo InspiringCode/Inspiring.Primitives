@@ -404,6 +404,13 @@ namespace Inspiring {
                     .Combine((agg, val) => agg + " " + val);
             THEN["the result has the aggregated value"] |= () => s.Should().HaveValue("A B C");
             AND["it contains all result items"] |= () => s.Should().HaveItemsInOrder(AnItem, AnotherItem);
+
+            WHEN["combining an empty list of void results"] |= () => v = new Result[] { }.Combine();
+            THEN["it returns an empty result"] |= () => v.Should().Be(Result.Empty);
+
+            WHEN["combining an empty list of value results"] |= () => s =
+                new Result<string>[] { }.Combine((agg, val) => agg + " " + val);
+            THEN["it returns an empty result"] |= () => s.Should().NotHaveAValue();
         }
 
         [Scenario(DisplayName = "Task Support")]

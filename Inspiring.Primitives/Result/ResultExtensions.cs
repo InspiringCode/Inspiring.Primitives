@@ -17,11 +17,11 @@ namespace Inspiring {
 
         public static Result Combine(this IEnumerable<Result> results) => results
             .MustNotBeNull(nameof(results))
-            .Aggregate((agg, next) => agg + next);
+            .Aggregate(seed: Result.Empty, (agg, next) => agg + next);
 
         public static Result<T> Combine<T>(this IEnumerable<Result<T>> results) => results
             .MustNotBeNull(nameof(results))
-            .Aggregate((agg, next) => agg + next);
+            .Aggregate(seed: new Result<T>(), (agg, next) => agg + next);
 
         public static Result<TAccumulate> Combine<T, TAccumulate>(
             this IEnumerable<Result<T>> results,
