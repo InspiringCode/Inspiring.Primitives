@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Inspiring {
     public static class ResultExtensions {
+        public static async Task<Result> ToVoid<T>(this Task<Result<T>> resultTask)
+            => (await resultTask).ToVoid();
+
         public static IEnumerable<TItem> Get<TItem>(this IResult result, Func<TItem, bool> predicate) where TItem : IResultItem {
             result.MustNotBeNull(nameof(result));
             predicate.MustNotBeNull(nameof(predicate));

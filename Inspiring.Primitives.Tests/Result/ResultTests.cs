@@ -50,6 +50,12 @@ namespace Inspiring {
             THEN["the result has no errors and no items"] |= () => v.Should().NotHaveItems().And.NotHaveErrors();
         }
 
+        [Scenario]
+        internal void CustomResultItems(Result v, Result<int> t) {
+            CUSTOM["A custom item can be assigned to a void result"] |= () => v = new CustomTestItem();
+            CUSTOM["A custom item can be added to a value result"] |= () => t += new CustomTestItem();
+            CUSTOM["A custom item can be added to a void result"] |= () => t = Result.Empty + new CustomTestItem();
+        }
 
         [Scenario]
         internal void Conversions(Result<string> s, Result<int> i) {
@@ -431,6 +437,16 @@ namespace Inspiring {
             public bool IsError { get; set; }
 
             public override string ToString() => Message;
+        }
+
+        internal class CustomTestItem : IResultItem, IResultItemInfo {
+            public bool IsError => false;
+
+            public static implicit operator Result(CustomTestItem item)
+                => new Result().Add(item);
+
+            public static implicit operator Task<Result>(CustomTestItem item)
+                => Task.FromResult<Result>(item);
         }
     }
 }
