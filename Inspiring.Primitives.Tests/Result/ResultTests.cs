@@ -403,7 +403,7 @@ namespace Inspiring {
                 new Result<string>[] { "first", AnItem, "second", Result.From("third") + AnotherItem, Result.Empty }
                     .Combine(ImmutableList.Create<string>(), (list, val) => list.Add(val));
             THEN["the result has the aggregated value"] |= () => combined.Value.Should().BeEquivalentTo("first", "second", "third");
-            AND["it contains all result items"] |= () => s.Should().HaveItemsInOrder(AnItem, AnotherItem);
+            AND["it contains all result items"] |= () => combined.Should().HaveItemsInOrder(AnItem, AnotherItem);
 
             WHEN["combining some values with just a value selector"] |= () => s =
                 new Result<string>[] { "A", AnItem, "B", Result.From("C") + AnotherItem, Result.Empty }
@@ -417,6 +417,29 @@ namespace Inspiring {
             WHEN["combining an empty list of value results"] |= () => s =
                 new Result<string>[] { }.Combine((agg, val) => agg + " " + val);
             THEN["it returns an empty result"] |= () => s.Should().NotHaveAValue();
+
+            WHEN["comining a list of of result tasks"] |= async () => v = await new[] {
+                    Task.FromResult<Result>(AnItem),
+                    Task.FromResult<Result>(AnotherItem)
+                }.CombineAsync();
+            THEN["the combined result is returned"] |= () => v.Should().Be(Result.Empty + AnItem + AnotherItem);
+
+            WHEN["comining a list of of value result tasks"] |= async () => s = await new[] {
+                    Task.FromResult<Result<string>>("A"),
+                    Task.FromResult<Result<string>>(AnItem)
+                }.CombineAsync();
+            THEN["the combined result is returned"] |= () => s.Should().Be(Result.From("A") + AnItem);
+
+            WHEN["combining some value result task with a seed and a value selector"] |= async () => combined = await new [] {
+                    Task.FromResult<Result<string>>("first"),
+                    Task.FromResult<Result<string>>(AnItem),
+                    Task.FromResult<Result<string>>("second"),
+                    Task.FromResult<Result<string>>("third"),
+                    Task.FromResult<Result<string>>(AnotherItem),
+                    Task.FromResult<Result<string>>(Result.Empty)
+                }.CombineAsync(ImmutableList.Create<string>(), (list, val) => list.Add(val));
+            THEN["the result has the aggregated value"] |= () => combined.Value.Should().BeEquivalentTo("first", "second", "third");
+            AND["it contains all result items"] |= () => combined.Should().HaveItemsInOrder(AnItem, AnotherItem);
         }
 
         [Scenario(DisplayName = "Task Support")]

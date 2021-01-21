@@ -19,6 +19,42 @@ namespace Inspiring {
             return result.Get<TItem>().Any(predicate ?? (_ => true));
         }
 
+        public static async Task<Result> CombineAsync(this IEnumerable<Task<Result>> results) {
+            results.MustNotBeNull(nameof(results));
+            Result result = new Result();
+            foreach (Task<Result> t in results) {
+                result += await t;
+            }
+            return result;
+        }
+
+        public static async Task<Result<T>> CombineAsync<T>(this IEnumerable<Task<Result<T>>> results) {
+            results.MustNotBeNull(nameof(results));
+            Result<T> result = new Result<T>();
+            foreach (Task<Result<T>> t in results) {
+                result += await t;
+            }
+            return result;
+        }
+
+        public async static Task<Result<TAccumulate>> CombineAsync<T, TAccumulate>(
+            this IEnumerable<Task<Result<T>>> results,
+            TAccumulate seed,
+            Func<TAccumulate, T, TAccumulate> func
+        ) {
+            Result value = Result.Empty;
+
+            foreach (Task<Result<T>> t in results) {
+                Result<T> r = await t;
+                if (r.HasValue)
+                    seed = func(seed, r.Value);
+
+                value += r.ToVoid();
+            }
+
+            return value.SetTo(seed);
+        }
+
         public static Result Combine(this IEnumerable<Result> results) => results
             .MustNotBeNull(nameof(results))
             .Aggregate(seed: Result.Empty, (agg, next) => agg + next);
