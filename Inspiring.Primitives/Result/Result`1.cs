@@ -131,6 +131,21 @@ namespace Inspiring {
                 transformed.To<R>();
         }
 
+        /****************************** OnCallbacks *****************************/
+
+        // can't put these into extension methods because of inferring generic parameters
+        public Result<T> OnItems<TItem>(Action<IEnumerable<TItem>> action, Func<TItem, bool>? itemPredicate = null) where TItem : IResultItem  {
+            return this.OnHasItem(s => {
+                action.Invoke(s.Get<TItem>());
+            }, itemPredicate);
+        }
+
+        public Result<T> OnItem<TItem>(Action<TItem> action, Func<TItem, bool>? itemPredicate = null) where TItem : IResultItem  {
+            return this.OnHasItem(s => {
+                action.Invoke(s.Get<TItem>().First());
+            }, itemPredicate);
+        }
+
         /****************************** EQUALITY *****************************/
 
         public bool Equals(Result<T> other) =>
