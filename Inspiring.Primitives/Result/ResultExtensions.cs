@@ -90,5 +90,31 @@ namespace Inspiring {
                     (acc + x).SetTo(func(acc, x)) :
                     (acc + x));
         }
+        
+        private static Result<T> On<T>(this Result<T> source, Predicate<Result<T>> condition, Func<Result<T>, Result<T>> mapper) {
+            return condition.Invoke(source) ? mapper.Invoke(source) : source;
+        }
+        
+        private static Result<T> OnValue<T>(this Result<T> source, Func<Result<T>, Result<T>> mapper) {
+            return On(source, s => s.HasValue, mapper);
+        }
+
+        public static Result<T> OnValue<T>(this Result<T> source, Action action) {
+            return OnValue(source, _ => {
+                action.Invoke();
+                return _;
+            });
+        }
+
+        private static Result<T> OnNoValue<T>(this Result<T> source, Func<Result<T>, Result<T>> mapper) {
+            return On(source, s => !s.HasValue, mapper);
+        }
+        
+        public static Result<T> OnNoValue<T>(this Result<T> source, Action action) {
+            return OnNoValue(source, _ => {
+                action.Invoke();
+                return _;
+            });
+        }
     }
 }

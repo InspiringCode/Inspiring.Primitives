@@ -38,7 +38,7 @@ namespace Inspiring {
         internal Result(T value, ImmutableList<IResultItem>? items)
             : this(true, value, items) { }
 
-        private Result(bool hasValue = false, T value = default!, ImmutableList<IResultItem>? items = null) {
+        internal Result(bool hasValue = false, T value = default!, ImmutableList<IResultItem>? items = null) {
             _items = items;
             _value = value!;
             _hasValue = hasValue;
@@ -64,13 +64,27 @@ namespace Inspiring {
 
         public Result<U> To<U>()
             => new Result<U>(_items);
+        
+        public Result<U> SetTo<U>(U? value)
+            => SetTo(false, value)!;
+        
+        public Result<U> SetToExplicit<U>(U value)
+            => SetTo(true, value);
+        
+        private Result<U> SetTo<U>(bool treatNullAsValue, U value)
+            => new Result<U>(treatNullAsValue || value != null, value, _items);
 
-        public Result<U> SetTo<U>(U value)
-            => new Result<U>(value, _items);
+        public Result<U> SetTo<U>(U? value) where U : struct
+            => SetTo(false, value);
+
+        public Result<U> SetToExplicit<U>(U? value)  where U : struct
+            => SetTo(true, value);
+        
+        private Result<U> SetTo<U>(bool treatNullAsValue, U? value)  where U : struct
+            => new Result<U>(treatNullAsValue || value.HasValue, value.GetValueOrDefault(), _items);
 
         public Result<T> Or(T defaultValue) =>
             HasValue ? this : SetTo(defaultValue);
-
 
         /*********************** TRANSFORMATION METHODS **********************/
 
@@ -79,10 +93,26 @@ namespace Inspiring {
                 ToVoid() + transformation(Value) :
                 To<U>();
 
-        public Result<U> Transform<U>(Func<T, U> transformation) =>
-            HasValue ?
-                ToVoid() + Result.From(transformation(Value)) :
-                To<U>();
+        public Result<U> Transform<U>(Func<T, U?> transformation) where U : struct {
+            if (!HasValue)
+                return To<U>();
+
+            var transformResult = transformation(Value);
+            return transformResult.HasValue ? ToVoid() + Result.From(transformResult.Value) : To<U>();
+        }
+
+        public Result<U> Transform<U>(Func<T, U?> transformation) where U : class =>
+            Transform(false, transformation)!;
+
+        public Result<U> TransformExplicit<U>(Func<T, U> transformation) =>
+            Transform(true, transformation);
+
+        private Result<U> Transform<U>(bool treatNullAsValue, Func<T, U> transformation) {
+            if (!HasValue)
+                return To<U>();
+            
+            return ToVoid() + Result.From(transformation(Value), treatNullAsValue);
+        }
 
         [EditorBrowsable(EditorBrowsableState.Never)]
         public Result<R> SelectMany<U, R>(Func<T, Result<U>> transformation, Func<T, U, R> resultSelector) {
@@ -168,9 +198,9 @@ namespace Inspiring {
 
 
         /************************** CAST OPERATORS ***************************/
-
-        public static implicit operator Result<T>(T value)
-            => new Result<T>(true, value);
+        
+        public static implicit operator Result<T>(T? value)
+            => Result.From(value, treatNullAsValue: false)!;
 
         public static implicit operator T(Result<T> result)
             => result.Value;
