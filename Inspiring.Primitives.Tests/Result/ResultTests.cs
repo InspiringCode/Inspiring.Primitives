@@ -559,6 +559,29 @@ namespace Inspiring {
                 executed.Should().BeTrue();
             };
         }
+        
+        [Scenario(DisplayName = "OrUse Support")]
+        internal void OrUseSupport(Result<string> s, Result u, TestItem i1) {
+            GIVEN["two test items"] |= () => i1 = new TestItem();
+            
+            WHEN["there is a result with no value and an conditional item"] |= () => {
+                s = (string)null;
+                s = s.OrUse(() => i1);
+            };
+            THEN["the item should be present"] |= () => {
+                s.Should().NotHaveAValue();
+                s.Should().HaveItem(i1);
+            };
+            
+            WHEN["there is a result with a value and an conditional item"] |= () => {
+                s = "42";
+                s = s.OrUse(() => i1);
+            };
+            THEN["the item should not be present"] |= () => {
+                s.Should().HaveValue();
+                s.Should().NotHaveItems();
+            };
+        }
 
         internal class TestItem : ResultItem, IResultItemInfo {
             public string Message { get; set; }

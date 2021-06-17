@@ -64,13 +64,13 @@ namespace Inspiring {
 
         public Result<U> To<U>()
             => new Result<U>(_items);
-        
+
         public Result<U> SetTo<U>(U? value)
             => SetTo(false, value)!;
-        
+
         public Result<U> SetToExplicit<U>(U value)
             => SetTo(true, value);
-        
+
         private Result<U> SetTo<U>(bool treatNullAsValue, U value)
             => new Result<U>(treatNullAsValue || value != null, value, _items);
 
@@ -79,12 +79,18 @@ namespace Inspiring {
 
         public Result<U> SetToExplicit<U>(U? value)  where U : struct
             => SetTo(true, value);
-        
+
         private Result<U> SetTo<U>(bool treatNullAsValue, U? value)  where U : struct
             => new Result<U>(treatNullAsValue || value.HasValue, value.GetValueOrDefault(), _items);
 
         public Result<T> Or(T defaultValue) =>
             HasValue ? this : SetTo(defaultValue);
+
+        public Result<T> OrUse(Func<Result<T>> transformation) =>
+            HasValue ? this : this + transformation();
+
+        public Result<T> OrUse(Func<Result> transformation) =>
+            HasValue ? this : this + transformation();
 
         /*********************** TRANSFORMATION METHODS **********************/
 
