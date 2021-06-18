@@ -98,7 +98,7 @@ namespace Inspiring {
 
 
         [Scenario]
-        internal void SetToValue(Result<int> t, Result v, Result<string> actual) {
+        internal void SetToValue(Result<int> t, Result v, Result<string> actual, Result<int> actualStruct) {
             WHEN["setting a value on a void result"] |= () => {
                 v = AnItem;
                 actual = v.SetTo("test");
@@ -113,6 +113,38 @@ namespace Inspiring {
             };
             THEN["the result has the value"] |= () => actual.Should().HaveValue("test");
             AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
+            
+            WHEN["setting null value on result"] |= () => {
+                t = AnItem;
+                t = t.SetTo(5);
+                actual = t.SetTo((string)null);
+            };
+            THEN["the result has no value"] |= () => actual.Should().NotHaveAValue();
+            AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
+            
+            WHEN["setting null value explicitly"] |= () => {
+                t = AnItem;
+                t = t.SetTo(5);
+                actual = t.SetToExplicit((string)null);
+            };
+            THEN["the result has a value"] |= () => actual.Should().HaveValue();
+            AND["and contains the original items"] |= () => actual.Should().HaveItem(AnItem);
+            
+            WHEN["setting null value on struct result"] |= () => {
+                t = AnItem;
+                t = t.SetTo(5);
+                actualStruct = t.SetTo((int?)null);
+            };
+            THEN["the result has no value"] |= () => actualStruct.Should().NotHaveAValue();
+            AND["and contains the original items"] |= () => actualStruct.Should().HaveItem(AnItem);
+            
+            WHEN["setting null value explicitly on struct result"] |= () => {
+                t = AnItem;
+                t = t.SetTo(5);
+                actualStruct = t.SetToExplicit((int?)null);
+            };
+            THEN["the result has a value"] |= () => actualStruct.Should().HaveValue();
+            AND["and contains the original items"] |= () => actualStruct.Should().HaveItem(AnItem);
         }
 
 
@@ -179,8 +211,11 @@ namespace Inspiring {
             WHEN["comparing a Result<reference type> without a value to null"] |= () => s1 = Result.Of<string>();
             THEN["it is not equal"] |= () => s1.Equals((object)null).Should().BeFalse();
 
-            WHEN["comparing a Result<reference type> with a null value to null"] |= () => s1 = Result.From<string>(null);
+            WHEN["comparing a explicit Result<reference type> with a null value to null"] |= () => s1 = Result.FromExplicit<string>(null);
             THEN["it is equal"] |= () => s1.Equals((object)null).Should().BeTrue();
+            
+            WHEN["comparing a implicit Result<reference type> with a null value to null"] |= () => s1 = Result.From<string>(null);
+            THEN["it is equal"] |= () => s1.Should().Be(Result.Of<string>());
 
             WHEN["comparing a VoidResult to null"] |= () => v1 = Result.Empty;
             THEN["it is not equal"] |= () => v1.Equals(null).Should().BeFalse();
@@ -204,7 +239,7 @@ namespace Inspiring {
             WHEN["comparing a Result<T> to an Result<U> without values"] |= () => (i1, l1) = (Result.Of<int>(), Result.Of<long>());
             THEN["they are never equal"] |= () => assertInequality(i1, l1, allowHashCodesToBeEqual: true);
 
-            WHEN["comparing two Result<T> with null values"] |= () => (s1, d1) = (Result.From<string>(null), Result.From<IDisposable>(null));
+            WHEN["comparing two explicit Result<T> with null values"] |= () => (s1, d1) = (Result.FromExplicit<string>(null), Result.FromExplicit<IDisposable>(null));
             THEN["they are equal"] |= () => assertEquality(s1, d1);
 
             WHEN["comparing a Result to a Nothing"] |= () => (v1, n) = (Result.Empty, Result.Nothing);
@@ -265,7 +300,7 @@ namespace Inspiring {
         }
 
         [Scenario(DisplayName = "Transformation")]
-        internal void Transformation(Result<string> s, TestItem item1, TestItem item2) {
+        internal void Transformation(Result<string> s, Result<int> structResult, TestItem item1, TestItem item2) {
             GIVEN["a few items"] |= () => (item1, item2) = (new TestItem(), new TestItem());
             WHEN["the result does not have a value"] |= () => {
                 Result<int> i = item1;
@@ -290,6 +325,38 @@ namespace Inspiring {
             THEN["the result of the transformation is merged with the original result"] |= () => s.Should()
                 .HaveValue("27").And
                 .HaveItemsInOrder(item1, item2);
+            
+            WHEN["the result has a value and is converted to null"] |= () => {
+                Result<int> i = Result.From(27) + item1;
+                s = i.Transform(val => (string)null);
+            };
+            THEN["the transformation is executed"] |= () => s.Should()
+                .NotHaveAValue().And
+                .HaveItemsInOrder(item1);
+            
+            WHEN["the result has a value and is converted to null struct"] |= () => {
+                Result<int> i = Result.From(27) + item1;
+                structResult = i.Transform(val => (int?)null);
+            };
+            THEN["the transformation is executed"] |= () => structResult.Should()
+                .NotHaveAValue().And
+                .HaveItemsInOrder(item1);
+            
+            WHEN["the result has no value and is converted to a struct"] |= () => {
+                Result<int> i = Result.From<int>(null) + item1;
+                s = i.Transform(val => "27");
+            };
+            THEN["the transformation is not executed"] |= () => s.Should()
+                .NotHaveAValue().And
+                .HaveItemsInOrder(item1);
+            
+            WHEN["the explicit result has no value and is converted to a struct"] |= () => {
+                Result<int?> i = Result.FromExplicit<int?>(null) + item1;
+                s = i.Transform(val => "27");
+            };
+            THEN["the transformation is executed"] |= () => s.Should()
+                .HaveValue("27").And
+                .HaveItemsInOrder(item1);
         }
 
         [Scenario(DisplayName = "LINQ syntax")]
@@ -452,6 +519,68 @@ namespace Inspiring {
 
             WHEN["assining a result item to a task"] |= () => vt = AnItem;
             THEN["a completed task is implicitly created"] |= () => vt.Result.Should().Be(Result.Empty + AnItem);
+        }
+        
+        [Scenario(DisplayName = "OnCondition Support")]
+        internal void OnConditionExecuteSupport(Result<string> s, bool executed) {
+            WHEN["there is a result with a value"] |= () => {
+                s = "42";
+                executed = false;
+            };
+            THEN["OnValue should be executed"] |= () => {
+                s.OnValue(() => executed = true);
+                executed.Should().BeTrue();
+            };
+            
+            WHEN["there is a result without a value"] |= () => {
+                s = (string)null;
+                executed = false;
+            };
+            THEN["OnValue should not be executed"] |= () => {
+                s.OnValue(() => executed = true);
+                executed.Should().BeFalse();
+            };
+            
+            WHEN["there is a result with a value"] |= () => {
+                s = "42";
+                executed = false;
+            };
+            THEN["OnNoValue should not be executed"] |= () => {
+                s.OnNoValue(() => executed = true);
+                executed.Should().BeFalse();
+            };
+            
+            WHEN["there is a result without a value"] |= () => {
+                s = (string)null;
+                executed = false;
+            };
+            THEN["OnNoValue should be executed"] |= () => {
+                s.OnNoValue(() => executed = true);
+                executed.Should().BeTrue();
+            };
+        }
+        
+        [Scenario(DisplayName = "OrUse Support")]
+        internal void OrUseSupport(Result<string> s, Result u, TestItem i1) {
+            GIVEN["two test items"] |= () => i1 = new TestItem();
+            
+            WHEN["there is a result with no value and an conditional item"] |= () => {
+                s = (string)null;
+                s = s.OrUse(() => i1);
+            };
+            THEN["the item should be present"] |= () => {
+                s.Should().NotHaveAValue();
+                s.Should().HaveItem(i1);
+            };
+            
+            WHEN["there is a result with a value and an conditional item"] |= () => {
+                s = "42";
+                s = s.OrUse(() => i1);
+            };
+            THEN["the item should not be present"] |= () => {
+                s.Should().HaveValue();
+                s.Should().NotHaveItems();
+            };
         }
 
         internal class TestItem : ResultItem, IResultItemInfo {

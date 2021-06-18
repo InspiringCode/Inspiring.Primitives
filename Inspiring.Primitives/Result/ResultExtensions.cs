@@ -90,5 +90,63 @@ namespace Inspiring {
                     (acc + x).SetTo(func(acc, x)) :
                     (acc + x));
         }
+
+        private static Result<T> On<T>(this Result<T> source, Predicate<Result<T>> condition, Func<Result<T>, Result<T>> mapper) {
+            return condition.Invoke(source) ? mapper.Invoke(source) : source;
+        }
+
+        private static Result<T> OnHasItem<T, TItem>(this Result<T> source, Func<Result<T>, Result<T>> mapper, Func<TItem, bool>? itemPredicate = null) where TItem : IResultItem {
+            return On(source, s => s.Has(itemPredicate), mapper);
+        }
+
+        private static Result<T> OnValue<T>(this Result<T> source, Func<Result<T>, Result<T>> mapper) {
+            return On(source, s => s.HasValue, mapper);
+        }
+
+        public static Result<T> OnValue<T>(this Result<T> source, Action action) {
+            return OnValue(source, _ => {
+                action.Invoke();
+                return _;
+            });
+        }
+
+        public static Result<T> OnValue<T>(this Result<T> source, Action<Result<T>> action) {
+            return OnValue(source, s => {
+                action.Invoke(s);
+                return s;
+            });
+        }
+
+        private static Result<T> OnNoValue<T>(this Result<T> source, Func<Result<T>, Result<T>> mapper) {
+            return On(source, s => !s.HasValue, mapper);
+        }
+
+        public static Result<T> OnNoValue<T>(this Result<T> source, Action action) {
+            return OnNoValue(source, _ => {
+                action.Invoke();
+                return _;
+            });
+        }
+
+        public static Result<T> OnNoValue<T>(this Result<T> source, Action<Result<T>> action) {
+            return OnNoValue(source, s => {
+                action.Invoke(s);
+                return s;
+            });
+        }
+
+        public static Result<T> OnHasItem<TItem, T>(this Result<T> source, Action action, Func<TItem, bool>? itemPredicate = null) where TItem : IResultItem  {
+            return OnHasItem(source, _ => {
+                action.Invoke();
+                return _;
+            }, itemPredicate);
+        }
+
+        public static Result<T> OnHasItem<TItem, T>(this Result<T> source, Action<Result<T>> action, Func<TItem, bool>? itemPredicate = null) where TItem : IResultItem  {
+            return OnHasItem(source, s => {
+                action.Invoke(s);
+                return s;
+            }, itemPredicate);
+        }
     }
 }

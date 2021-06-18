@@ -44,10 +44,24 @@ namespace Inspiring {
 
         public Result<T> To<T>()
             => new Result<T>(_items);
+        
+        public Result<T> SetTo<T>(T? value)
+            => SetTo(false, value)!;
+        
+        public Result<T> SetToExplicit<T>(T value)
+            => SetTo(true, value);
+        
+        private Result<T> SetTo<T>(bool treatNullAsValue, T value)
+            => new Result<T>(treatNullAsValue || value != null, value, _items);
 
-        public Result<T> SetTo<T>(T value)
-            => new Result<T>(value, _items);
+        public Result<T> SetTo<T>(T? value) where T : struct
+            => SetTo(false, value);
 
+        public Result<T> SetToExplicit<T>(T? value)  where T : struct
+            => SetTo(true, value);
+        
+        private Result<T> SetTo<T>(bool treatNullAsValue, T? value)  where T : struct
+            => new Result<T>(treatNullAsValue || value.HasValue, value.GetValueOrDefault(), _items);
 
         /****************************** EQUALITY *****************************/
 
@@ -76,8 +90,27 @@ namespace Inspiring {
 
         public static Result<T> Of<T>() => default;
 
-        public static Result<T> From<T>(T value) => value;
+        public static Result<T> From<T>(T? value) where T : class =>
+            From(value, false)!;
 
+        public static Result<T> FromExplicit<T>(T value) =>
+            From(value, true);
+
+        internal static Result<T> From<T>(T value, bool treatNullAsValue) =>
+            new Result<T>(treatNullAsValue || value != null, value);
+        
+        public static Result<T> From<T>(T? value) where T : struct =>
+            From(value, false);
+        
+        public static Result<T> FromExplicit<T>(T? value) where T : struct =>
+            From(value, true);
+
+        // second parameter needed to prevent compile issue with duplicate method signature
+        public static Result<T> From<T>(T value, T _ = default) where T : struct =>
+            From(value, false);
+        
+        internal static Result<T> From<T>(T? value, bool treatNullAsValue) where T : struct =>
+             new Result<T>(value.HasValue, value.GetValueOrDefault());
 
         /************************** CAST OPERATORS ***************************/
 
