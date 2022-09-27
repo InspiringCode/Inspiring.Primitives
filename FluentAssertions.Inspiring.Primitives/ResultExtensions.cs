@@ -39,9 +39,8 @@ namespace FluentAssertions {
         where T : IResult {
         protected override string Identifier => "result";
 
-        public ResultAssertions(T instance) {
-            Subject = instance;
-        }
+        public ResultAssertions(T subject)
+            : base(subject) { }
 
         public AndConstraint<ResultAssertions<T>> HaveItem(IResultItem expected) {
             Execute.Assertion
@@ -94,7 +93,7 @@ namespace FluentAssertions {
         public AndConstraint<ResultAssertions<T>> Be(T expected, string because = "", params object[] becauseArgs) {
             Execute.Assertion
                 .BecauseOf(because, becauseArgs)
-                .ForCondition(Subject.IsSameOrEqualTo(expected))
+                .ForCondition(Equals(Subject, expected))
                 .FailWith("Expected result to be {0}{reason}, but found {1}.", expected, Subject);
 
             return new AndConstraint<ResultAssertions<T>>(this);
@@ -102,7 +101,7 @@ namespace FluentAssertions {
 
         public AndConstraint<ResultAssertions<T>> NotBe(T unexpected, string because = "", params object[] becauseArgs) {
             Execute.Assertion
-                .ForCondition(!Subject.IsSameOrEqualTo(unexpected))
+                .ForCondition(!Equals(Subject, unexpected))
                 .BecauseOf(because, becauseArgs)
                 .FailWith("Did not expect {context:result} to be equal to {0}{reason}.", unexpected);
 
